@@ -5,10 +5,8 @@ using Base.SparseMatrix
 
 export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl
 export get_iparm, get_dparm, get_mtype, get_solver, get_phase, get_msglvl
-export get_nprocs
-
+export get_nprocs, pardiso
 export check_matrix, check_vec, print_stats, init_pardiso
-
 export pA_ldiv_B!, pA_ldiv_B, pAt_ldiv_B!, pAt_ldiv_B
 
 # Libraries
@@ -21,8 +19,12 @@ const libparadiso = Libdl.dlopen("libparadiso", Libdl.RTLD_GLOBAL)
 const init = Libdl.dlsym(libparadiso, "pardisoinit")
 const pardiso_f = Libdl.dlsym(libparadiso, "pardiso")
 const pardiso_chkmatrix = Libdl.dlsym(libparadiso, "pardiso_chkmatrix")
+const pardiso_chkmatrix_z = Libdl.dlsym(libparadiso, "pardiso_chkmatrix_z")
 const pardiso_printstats = Libdl.dlsym(libparadiso, "pardiso_printstats")
+const pardiso_printstats_z = Libdl.dlsym(libparadiso, "pardiso_printstats_z")
 const pardiso_chkvec = Libdl.dlsym(libparadiso, "pardiso_chkvec")
+const pardiso_chkvec_z = Libdl.dlsym(libparadiso, "pardiso_chkvec_z")
+
 
 
 # PARDISO states
@@ -45,6 +47,8 @@ const MSGLVL = Int32[0]
 
 
 const VALID_MTYPES = [1, 2, -2, 3, 4, -4, 6, 11, 13]
+const REAL_MTYPES = [1, 2, -2, 11]
+const COMPLEX_MTYPES = [3, 4, -4, 6, 13]
 const VALID_SOLVERS = [0, 1]
 const VALID_PHASES = [11, 12, 13, 22, -22, 23, 33, 0, -1]
 const VALID_MSGLVLS = [0, 1]
@@ -101,21 +105,21 @@ init_pardiso(MTYPE::Int, SOLVER::Int) = init_pardiso(convert(Int32, MTYPE),
                                                      convert(Int32, SOLVER))
 
 # Solvers
-function pA_ldiv_B(A::SparseMatrixCSC, B::VecOrMat{Float64})
+function pA_ldiv_B{Ti, Tv}(A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
     dim_check(B, A, B)
     X = similar(B)
     pA_ldiv_B!(X, A, B)
     return X
 end
 
-function pAt_ldiv_B(A::SparseMatrixCSC, B::VecOrMat{Float64})
+function pAt_ldiv_B{Ti, Tv}(A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
     dim_check(B, A, B)
     X = similar(B)
     pAt_ldiv_B!(X, A, B)
     return X
 end
 
-function pA_ldiv_B!(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float64})
+function pA_ldiv_B!{Ti, Tv}(X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
     dim_check(X, A, B)
     init_pardiso()
     IPARM[1] = 1
@@ -124,7 +128,7 @@ function pA_ldiv_B!(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float6
     return X
 end
 
-function pAt_ldiv_B!(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float64})
+function pAt_ldiv_B!{Ti, Tv}(X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
     dim_check(X, A, B)
     init_pardiso()
     IPARM[1] = 1
@@ -135,13 +139,23 @@ end
 
 
 
-function pardiso(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float64})
+function pardiso{Ti, Tv}(X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
+
+    if Tv <: Complex && MTYPE[1] in REAL_MTYPES
+        throw(ErrorException("Complex matrix and real matrix type set"))
+    end
+
+    if Tv <: Real && MTYPE[1] in COMPLEX_MTYPES
+        throw(ErrorException("Real matrix and complex matrix type set"))
+    end
+
     # For now only support one factorization
     MAXFCT = Int32(1)
     MNUM = Int32(1)
 
     N = Int32(size(A, 2))
-    AA = convert(Vector{Float64}, A.nzval)
+
+    AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
 
@@ -155,8 +169,8 @@ function pardiso(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float64})
     ERR = Int32[0]
     ccall(pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Float64}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Float64}, Ptr{Float64},
+           Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
+           Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
           PT, &MAXFCT, &MNUM, MTYPE, PHASE,
           &N, AA, IA, JA, PERM,
@@ -168,45 +182,68 @@ function pardiso(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float64})
 end
 
 # Different checks
-function print_stats(X::VecOrMat{Float64}, A::SparseMatrixCSC,
-                     B::VecOrMat{Float64})
+function print_stats{Ti, Tv}(X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti},
+                     B::VecOrMat{Tv})
     N = Int32(size(A, 2))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
     NRHS = Int32(size(B, 2))
     ERR = Int32[0]
-    ccall(pardiso_printstats, Void,
-          (Ptr{Int32}, Ptr{Int32}, Ptr{Float64}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}, Ptr{Float64},
+    if Tv <: Complex
+        ccall(pardiso_printstats_z, Void,
+              (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
+               Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
+               Ptr{Int32}),
+              MTYPE, &N, AA, IA, JA, &NRHS, B, ERR)
+    elseif Tv <: Real
+            ccall(pardiso_printstats, Void,
+          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
+           Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
            Ptr{Int32}),
           MTYPE, &N, AA, IA, JA, &NRHS, B, ERR)
+    end
     error_check(ERR)
     return
 end
 
-function check_matrix(A::SparseMatrixCSC, B::VecOrMat{Float64})
+function check_matrix{Ti, Tv}(A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
     N = Int32(size(A, 1))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
     ERR = Int32[0]
-    ccall(pardiso_chkmatrix, Void,
-         (Ptr{Int32}, Ptr{Int32}, Ptr{Float64}, Ptr{Int32},
-          Ptr{Int32}, Ptr{Int32}),
-         MTYPE, &N, AA, IA, JA, ERR)
+
+    if Tv <: Complex
+        ccall(pardiso_chkmatrix_z, Void,
+             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
+              Ptr{Int32}, Ptr{Int32}),
+             MTYPE, &N, AA, IA, JA, ERR)
+    elseif Tv <: Real
+        ccall(pardiso_chkmatrix, Void,
+             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
+              Ptr{Int32}, Ptr{Int32}),
+             MTYPE, &N, AA, IA, JA, ERR)
+    end
     error_check(ERR)
     return
 end
 
-function check_vec(B::VecOrMat{Float64})
+function check_vec{Tv}(B::VecOrMat{Tv})
     N = Int32(size(B, 1))
     NRHS = Int32(size(B, 2))
     ERR = Int32[0]
 
-    ccall(pardiso_chkvec, Void,
-         (Ptr{Int32}, Ptr{Int32}, Ptr{Float64}, Ptr{Int32}),
-         &N, &NRHS, B, ERR)
+    if Tv <: Complex
+        ccall(pardiso_chkvec_z, Void,
+             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
+             &N, &NRHS, B, ERR)
+    elseif Tv <: Real
+        ccall(pardiso_chkvec_z, Void,
+             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
+             &N, &NRHS, B, ERR)
+    end
+
     error_check(ERR)
     return
 end
@@ -243,3 +280,4 @@ function error_check(err::Vector{Int32})
 end
 
 end # module
+-
