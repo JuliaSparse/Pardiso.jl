@@ -1,28 +1,29 @@
 # Pardiso.jl
 
-The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.pardiso-project.org/) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without having a valid licence for PARDISO. This package is available free of charge and in no way replaces or alters any functionality of PARDISO.
+The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.pardiso-project.org/) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without having a valid license for PARDISO. This package is available free of charge and in no way replaces or alters any functionality of PARDISO.
 
 **Notes**: This package does currently not support MKL's PARDISO solver.
 
 
 ## Installation
 
-`Pardiso.jl` expectes the following libraries to be loadable from within Julia with `dlopen`.
-    * `libpardiso.so` - The PARDISO library.
-    * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
-    * `libgomp.so` - Library for OpenMP
+`Pardiso.jl` expects the following libraries to be loadable from within Julia with `dlopen`.
+
+* `libpardiso.so` - The PARDISO library.
+* `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
+* `libgomp.so` - Library for OpenMP
 
 `Pardiso.jl`  has currently only been tested to work on Linux.
 
 
 ## Basic Usage
 
-`Pardiso.jl` operates a bit like a state machine where you must first set the matrix type and subsequent calls to the solver routines will use the set type.
-
+This section will explain how to use solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
 
 ### Setting the matrix type
 
-The matrix type (default 11) is set with `set_mtype(key)` where the key has the following meaning:
+The matrix type (default 11) should be set before calling the solve functions. This is done with `set_mtype(key)` where the key has the following meaning:
+
 | key   | Matrix type                               |
 |----   |-----------------------------------------  |
 | 1     | real and structurally symmetric           |
@@ -43,16 +44,23 @@ The number of processors to use is set by defining the environment variable `OMP
 
 ### Solving
 
-Note that currently, only real matrices is supported.
+Four different versions are provided. The syntax now is not very beautiful but they are currently named this way to be similar to the Julia Base versions.
 
-Four different versions are provided.
+* `pA_ldiv_B!(X, A, B)` solves `AX = B` and stores the result in `X`.
+* `pA_ldiv_B(A, B)` solves `AX = B` and returns a newly allocated `X`.
+* `pAt_ldiv_B!(X, A, B)` solves `A^T X = B` and stores the result in `X`.
+* `pAt_ldiv_B(A, B)` solves `A^T X = B` and returns a newly allocated `X`.
+
 
 ## More advanced usage.
 
-To call the pardiso function directly
+For terminology in this section please refer to the [PARDISO manual](http://www.pardiso-project.org/manual/manual.pdf).
+
+`Pardiso.jl` operates like a state machine where the properties of the solver is set before the call to the solve functions. After the solve function has completed, different types of data can be extracted.
 
 ### Setting the solver
-PARDISO also supports solving iteratively. The solver is set with `set_solver(key)` where the key has the following meaning:
+PARDISO supports direct and iterative solvers. The solver is set with `set_solver(key)` where the key has the following meaning:
+
 | key | Solver                           |
 |-----|----------------------------------|
 | 0   | sparse direct solver             |
@@ -62,6 +70,7 @@ PARDISO also supports solving iteratively. The solver is set with `set_solver(ke
 ### Setting the phase
 
 Depending on the phase calls to `pardiso` does different things. The phase is set with `set_phase(key::Int)` where key has the meaning:
+
 | key   | Solver Execution Steps                                         |
 |-------|----------------------------------------------------------------|
 | 11    | Analysis                                                       |
@@ -75,21 +84,17 @@ Depending on the phase calls to `pardiso` does different things. The phase is se
 | -1    | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
-Advanced users might want to explicitly set and retireve the `DPARM` and `IPARM` settings.
+Advanced users might want to explicitly set and retrieve the `DPARM` and `IPARM` settings.
 This can be done with the getters `get_iparm()`, `get_dparm()` and the setters `set_iparm(v::Int, i::Int)`, `set_dparm(v::FloatingPoint, i::Int)`, where the first argument is the value to set and the second is the index at which to set it.
 
-To set the default values of `IPARM` and `DPARM` for a given matrix type and solver call `init_pardiso()`
+To set the default values of `IPARM` and `DPARM` for a given matrix type and solver call `init_pardiso()`.
 
 When setting `IPARM` and `DPARM` explicitly, calls should now be made directly to
 ```
-pardiso(X::VecOrMat{Float64}, A::SparseMatrixCSC, B::VecOrMat{Float64})
+pardiso(X, A, B)
 ```
 which will not modify the `IPARM` and `DPARM` values.
 
-## Current limitations
-    * Only Float64 matrices supported
-    * No way to set a user defined fill-in reducing ordering.
- - There is currently no way of changing the following:
+# Contributions
 
-
-Documentation can be found in the [PARDISO manual](http://www.pardiso-project.org/manual/manual.pdf)
+If you have suggestions or idea of improving this package, please file an issue or even better, create a PR!
