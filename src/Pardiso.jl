@@ -13,17 +13,17 @@ export pA_ldiv_B!, pA_ldiv_B, pAt_ldiv_B!, pAt_ldiv_B
 const libblas= Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
 const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
 const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-const libparadiso = Libdl.dlopen("libparadiso", Libdl.RTLD_GLOBAL)
+const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
 
 # Pardiso functions
-const init = Libdl.dlsym(libparadiso, "pardisoinit")
-const pardiso_f = Libdl.dlsym(libparadiso, "pardiso")
-const pardiso_chkmatrix = Libdl.dlsym(libparadiso, "pardiso_chkmatrix")
-const pardiso_chkmatrix_z = Libdl.dlsym(libparadiso, "pardiso_chkmatrix_z")
-const pardiso_printstats = Libdl.dlsym(libparadiso, "pardiso_printstats")
-const pardiso_printstats_z = Libdl.dlsym(libparadiso, "pardiso_printstats_z")
-const pardiso_chkvec = Libdl.dlsym(libparadiso, "pardiso_chkvec")
-const pardiso_chkvec_z = Libdl.dlsym(libparadiso, "pardiso_chkvec_z")
+const init = Libdl.dlsym(libpardiso, "pardisoinit")
+const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
+const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
+const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
+const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
+const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
+const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
+const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
 
 
