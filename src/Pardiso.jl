@@ -31,7 +31,7 @@ const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 const IPARM = zeros(Int32, 64)
 # Set numper of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
 if ("OMP_NUM_THREADS" in keys(ENV))
-    IPARM[3] = ENV["OMP_NUM_THREADS"]
+    IPARM[3] = parse(Int, ENV["OMP_NUM_THREADS"])
 else
      IPARM[3]= CPU_CORES
 end
