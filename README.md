@@ -18,7 +18,7 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Basic Usage
 
-This section will explain how to use solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
+This section will explain how solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
 
 ### Setting the matrix type
 
