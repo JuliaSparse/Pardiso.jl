@@ -2,7 +2,7 @@
 
 The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.pardiso-project.org/) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without having a valid license for PARDISO. This package is available free of charge and in no way replaces or alters any functionality of PARDISO.
 
-**Notes**: This package does currently not support MKL's PARDISO solver.
+**Note**: This package does currently not support MKL's PARDISO solver.
 
 
 ## Installation
@@ -39,18 +39,19 @@ The matrix type (default 11) should be set before calling the solve functions. T
 
 ### Setting the number of processors
 
-The number of processors to use is set by defining the environment variable `OMP_NUM_THREADS` before loading the package. If this variable does not exist, the number of cores on the machine will be used.
+The number of processors to use is set by defining the environment variable `OMP_NUM_THREADS` before loading the package. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2. If this variable does not exist, the number of cores on the machine will be used.
 
 
 ### Solving
 
-Four different versions are provided. The syntax now is not very beautiful but they are currently named this way to be similar to the Julia Base versions.
+Four different versions are provided. The function names are currently not very beautiful but are currently named this way to be similar to the Julia Base versions.
 
 * `pA_ldiv_B!(X, A, B)` solves `AX = B` and stores the result in `X`.
 * `pA_ldiv_B(A, B)` solves `AX = B` and returns a newly allocated `X`.
 * `pAt_ldiv_B!(X, A, B)` solves `A^T X = B` and stores the result in `X`.
 * `pAt_ldiv_B(A, B)` solves `A^T X = B` and returns a newly allocated `X`.
 
+Note that the transposed versions are **not** the conjugate transpose in cases where `A` is complex.
 
 ## More advanced usage.
 
@@ -69,7 +70,7 @@ PARDISO supports direct and iterative solvers. The solver is set with `set_solve
 
 ### Setting the phase
 
-Depending on the phase calls to `pardiso` does different things. The phase is set with `set_phase(key::Int)` where key has the meaning:
+Depending on the phase calls to `pardiso` does different things. The phase is set with `set_phase(key)` where key has the meaning:
 
 | key   | Solver Execution Steps                                         |
 |-------|----------------------------------------------------------------|
@@ -87,13 +88,15 @@ Depending on the phase calls to `pardiso` does different things. The phase is se
 Advanced users might want to explicitly set and retrieve the `DPARM` and `IPARM` settings.
 This can be done with the getters `get_iparm()`, `get_dparm()` and the setters `set_iparm(v::Int, i::Int)`, `set_dparm(v::FloatingPoint, i::Int)`, where the first argument is the value to set and the second is the index at which to set it.
 
-To set the default values of `IPARM` and `DPARM` for a given matrix type and solver call `init_pardiso()`.
+To set the default values of the `IPARM` and `DPARM` states for a set state of matrix type and solver call `init_pardiso()`.
 
 When setting `IPARM` and `DPARM` explicitly, calls should now be made directly to
 ```
 pardiso(X, A, B)
 ```
 which will not modify the `IPARM` and `DPARM` values.
+
+**Note**: Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
 
 # Contributions
 
