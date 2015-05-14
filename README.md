@@ -20,9 +20,17 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 This section will explain how solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
 
+## Creating the ParadisoSolver
+
+A `ParadisoSolver` is created with `ParadisoSolver()`. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` will be referred so as `ps` as if it was created like this:
+
+```julia
+julia> ps = PardisoSolver()
+```
+
 ### Setting the matrix type
 
-The matrix type (default 11) should be set before calling the solve functions. This is done with `set_mtype(key)` where the key has the following meaning:
+The matrix type should be set before calling the solve functions. This is done with `set_mtype(ps, key)` where the key has the following meaning:
 
 | key   | Matrix type                               |
 |----   |-----------------------------------------  |
@@ -37,30 +45,64 @@ The matrix type (default 11) should be set before calling the solve functions. T
 | 13    | complex and nonsymmetric                  |
 
 
+The matrix type for a solver can be retrieved with `get_mtype(ps)`.
+
 ### Setting the number of processors
 
-The number of processors to use is set by defining the environment variable `OMP_NUM_THREADS` before loading the package. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2. If this variable does not exist, the number of cores on the machine will be used.
+The number of processors is set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2. If this variable does not exist, the number of cores on the machine will be used.
 
+The number of processors used by a solver can be retrieved with `get_nprocs(ps)`
 
 ### Solving
 
-Four different versions are provided. The function names are currently not very beautiful but are currently named this way to be similar to the Julia Base versions.
+Solving equations is done with the `solve` and `solve!` functions. They have the following signatures:
 
-* `pA_ldiv_B!(X, A, B)` solves `AX = B` and stores the result in `X`.
-* `pA_ldiv_B(A, B)` solves `AX = B` and returns a newly allocated `X`.
-* `pAt_ldiv_B!(X, A, B)` solves `A^T X = B` and stores the result in `X`.
-* `pAt_ldiv_B(A, B)` solves `A^T X = B` and returns a newly allocated `X`.
+* `solve(ps, A, B)` solves `AX=B` and returns B
+* `solve!(ps, X, A, B)` solves `AX=B` and stores it in X
 
-Note that the transposed versions are **not** the conjugate transpose in cases where `A` is complex.
+If instead one wants to solve`A^T X = B`, the symbol ":T" should be passed as an extra last argument to the functions.
+
+**Note**: The transposed versions are **not** the conjugate transpose in cases where `A` is complex.
+
+Here is a contrived example of solving a system of real equations with two right hand sides:
+
+```
+ps = PardisoSolver()
+set_mtype(ps, 11)
+set_phase(ps, 13)
+set_solver(ps, 0)
+
+A = sparse(rand(10, 10))
+b = rand(10, 2)
+x = zeros(10, 2)
+solve!(ps, x, A, b)
+````
+
+which happened to give the result
+
+```julia
+julia> x
+10x2 Array{Float64,2}:
+ -0.487361  -0.715372
+ -0.644219  -3.38342
+  0.465575   4.4838
+  1.14448   -0.103854
+  2.00892   -7.04965
+  0.870507   1.7014
+  0.590723  -5.74338
+ -0.843841  -0.903796
+ -0.279381   7.24754
+ -1.17295    8.47922
+```
 
 ## More advanced usage.
 
+This section discusses some more advanced usage of `Pardiso.jl`
+
 For terminology in this section please refer to the [PARDISO manual](http://www.pardiso-project.org/manual/manual.pdf).
 
-`Pardiso.jl` operates like a state machine where the properties of the solver is set before the call to the solve functions. After the solve function has completed, different types of data can be extracted.
-
 ### Setting the solver
-PARDISO supports direct and iterative solvers. The solver is set with `set_solver(key)` where the key has the following meaning:
+PARDISO supports direct and iterative solvers. The solver is set with `set_solver(ps, key)` where the key has the following meaning:
 
 | key | Solver                           |
 |-----|----------------------------------|
@@ -70,7 +112,7 @@ PARDISO supports direct and iterative solvers. The solver is set with `set_solve
 
 ### Setting the phase
 
-Depending on the phase calls to `pardiso` does different things. The phase is set with `set_phase(key)` where key has the meaning:
+Depending on the phase calls to `pardiso` does different things. The phase is set with `set_phase(ps, key)` where key has the meaning:
 
 | key   | Solver Execution Steps                                         |
 |-------|----------------------------------------------------------------|
@@ -86,17 +128,20 @@ Depending on the phase calls to `pardiso` does different things. The phase is se
 
 ### Setting `IPARM` and `DPARM` explicitly
 Advanced users might want to explicitly set and retrieve the `DPARM` and `IPARM` settings.
-This can be done with the getters `get_iparm()`, `get_dparm()` and the setters `set_iparm(v::Int, i::Int)`, `set_dparm(v::FloatingPoint, i::Int)`, where the first argument is the value to set and the second is the index at which to set it.
+This can be done with the getters `get_iparm(ps)`, `get_dparm(ps)` and the setters `set_iparm(ps, i, v)`, `set_dparm(ps, v, i)`, where the first argument is the value to set and the second is the index at which to set it.
 
-To set the default values of the `IPARM` and `DPARM` states for a set state of matrix type and solver call `init_pardiso()`.
+To set the default values of the `IPARM` and `DPARM` states for a set state of matrix type and solver call `init_pardiso(ps)`.
 
 When setting `IPARM` and `DPARM` explicitly, calls should now be made directly to
 ```
-pardiso(X, A, B)
+pardiso(ps, X, A, B)
 ```
 which will not modify the `IPARM` and `DPARM` values.
 
-**Note**: Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
+Some potential "gotchas":
+
+* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
+* For symmetric matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends to add an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
 
 # Contributions
 
