@@ -22,11 +22,7 @@ This section will explain how solve equations using `Pardiso.jl` with the defaul
 
 ## Creating the ParadisoSolver
 
-A `ParadisoSolver` is created with `ParadisoSolver()`. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` will be referred so as `ps` as if it was created like this:
-
-```julia
-julia> ps = PardisoSolver()
-```
+A `ParadisoSolver` is created with `ParadisoSolver()`. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` will be referred to as `ps`.
 
 ### Setting the matrix type
 
@@ -57,8 +53,8 @@ The number of processors used by a solver can be retrieved with `get_nprocs(ps)`
 
 Solving equations is done with the `solve` and `solve!` functions. They have the following signatures:
 
-* `solve(ps, A, B)` solves `AX=B` and returns X
-* `solve!(ps, X, A, B)` solves `AX=B` and stores it in X
+* `solve(ps, A, B)` solves `AX=B` and returns `X`
+* `solve!(ps, X, A, B)` solves `AX=B` and stores it in `X`
 
 If instead one wants to solve`A^T X = B`, the symbol `:T` should be passed as an extra last argument to the functions.
 
@@ -134,7 +130,7 @@ get_iparms(ps) # Gets IPARM
 set_iparm(ps, i, v) # Sets IPARM[i] = v
 
 get_dparm(ps, i) # Gets DPARM[i]
-get_dparm(os) # Gets DPARM
+get_dparms(ps) # Gets DPARM
 set_dparm(ps, i, v) # Sets DPARM[i] = v
 ```
 
