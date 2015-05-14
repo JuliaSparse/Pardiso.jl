@@ -69,8 +69,6 @@ Here is a contrived example of solving a system of real equations with two right
 ```
 ps = PardisoSolver()
 set_mtype(ps, 11)
-set_phase(ps, 13)
-set_solver(ps, 0)
 
 A = sparse(rand(10, 10))
 b = rand(10, 2)
