@@ -49,7 +49,7 @@ The matrix type for a solver can be retrieved with `get_mtype(ps)`.
 
 ### Setting the number of processors
 
-The number of processors is set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2. If this variable does not exist, the number of cores on the machine will be used.
+The number of processors is set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, the number of cores on the machine will be used.
 
 The number of processors used by a solver can be retrieved with `get_nprocs(ps)`
 
@@ -57,10 +57,10 @@ The number of processors used by a solver can be retrieved with `get_nprocs(ps)`
 
 Solving equations is done with the `solve` and `solve!` functions. They have the following signatures:
 
-* `solve(ps, A, B)` solves `AX=B` and returns B
+* `solve(ps, A, B)` solves `AX=B` and returns X
 * `solve!(ps, X, A, B)` solves `AX=B` and stores it in X
 
-If instead one wants to solve`A^T X = B`, the symbol ":T" should be passed as an extra last argument to the functions.
+If instead one wants to solve`A^T X = B`, the symbol `:T` should be passed as an extra last argument to the functions.
 
 **Note**: The transposed versions are **not** the conjugate transpose in cases where `A` is complex.
 
