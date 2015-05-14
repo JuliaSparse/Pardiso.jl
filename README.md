@@ -126,7 +126,7 @@ Depending on the phase calls to `pardiso` does different things. The phase is se
 
 ### Setting `IPARM` and `DPARM` explicitly
 Advanced users might want to explicitly set and retrieve the `DPARM` and `IPARM` settings.
-This can be done with the getters `get_iparm(ps)`, `get_dparm(ps)` and the setters `set_iparm(ps, i, v)`, `set_dparm(ps, v, i)`, where the first argument is the value to set and the second is the index at which to set it.
+This can be done with the getters `get_iparm(ps, i)`, `get_dparm(ps, i)` and the setters `set_iparm(ps, i, v)`, `set_dparm(ps, i, v)`, where the second argument is the value to set and the first is the index at which to set it.
 
 To set the default values of the `IPARM` and `DPARM` states for a set state of matrix type and solver call `init_pardiso(ps)`.
 

@@ -6,8 +6,8 @@ using Base.SparseMatrix
 import Base.show
 
 export PardisoSolver
-export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl
-export get_iparm, get_dparm, get_mtype, get_solver, get_phase, get_msglvl
+export set_iparm, set_dparm, set_iparms, set_dparms, set_mtype, set_solver, set_phase, set_msglvl
+export get_iparm, get_dparm, get_iparms, get_dparms, get_mtype, get_solver, get_phase, get_msglvl
 export get_nprocs, pardiso
 #export check_matrix, check_vec, print_stats, init_pardiso
 export solve, solve!
@@ -87,7 +87,6 @@ get_mtype(ps::PardisoSolver) = ps.mtype
 
 set_iparm(ps::PardisoSolver, i::Int, v::Int) = ps.iparm[i] = v
 set_dparm(ps::PardisoSolver, i::Int, v::FloatingPoint) = ps.dparm[i] = v
-
 set_iparms(ps::PardisoSolver, iparms::Vector{Int}) = ps.iparm = convert(Vector{Int32}, iparms)
 set_dparms(ps::PardisoSolver, dparms::Vector{Float64}) = ps.dparm = copy(v)
 
