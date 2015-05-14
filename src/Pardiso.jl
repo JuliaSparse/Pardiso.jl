@@ -7,9 +7,9 @@ import Base.show
 
 export PardisoSolver
 export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl
-export get_iparm, get_dparm, get_mtype, get_solver, get_phase, get_msglvl
-export get_nprocs, pardiso
-#export check_matrix, check_vec, print_stats, init_pardiso
+export get_iparm, get_iparms, get_dparm, get_dparms
+export get_mtype, get_solver, get_phase, get_msglvl, get_nprocs
+export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 
 # Libraries
@@ -35,6 +35,31 @@ const VALID_SOLVERS = [0, 1]
 const VALID_PHASES= [11, 12, 13, 22, -22, 23, 33, 0, -1]
 const VALID_MSGLVLS = [0, 1]
 
+const SOLVERS = Dict{Int, ASCIIString}()
+SOLVERS[0] = "Direct"
+SOLVERS[1] = "Iterative"
+
+const MTYPES = Dict{Int, ASCIIString}()
+MTYPES[1]  = "Real structurally symmetric"
+MTYPES[2]  = "Real symmetric positive definite"
+MTYPES[-2] = "Real symmetric indefinite"
+MTYPES[3]  = "Complex structurally symmetric"
+MTYPES[4]  = "Complex Hermitian postive definite"
+MTYPES[-4] = "Complex Hermitian indefinite"
+MTYPES[6]  = "Complex symmetric"
+MTYPES[11] = "Real nonsymmetric"
+MTYPES[13] = "Complex nonsymmetric"
+
+const PHASES = Dict{Int, ASCIIString}()
+PHASES[12]  = "Analysis, numerical factorization"
+PHASES[13]  = "Analysis, numerical factorization, solve, iterative refinement"
+PHASES[22]  = "Numerical factorization"
+PHASES[-22] = "Selected Inversion"
+PHASES[23]  = "Numerical factorization, solve, iterative refinement"
+PHASES[33]  = "Solve, iterative refinement"
+PHASES[0]   = "Release internal memory for L and U matrix number MNUM"
+PHASES[-1]  = "Release all internal memory for all matrices"
+
 typealias FC Union(Float64, Complex128)
 
 type PardisoSolver
@@ -51,9 +76,9 @@ function PardisoSolver()
     pt = zeros(Int, 64)
     iparm = zeros(Int32, 64)
     dparm = zeros(Float64, 64)
-    mtype = 11
-    solver = 0
-    phase = 13
+    mtype = 11 # Default to real unsymmetric matrices
+    solver = 0 # Default to direct solver
+    phase = 13 # Default to analysis + fact + solve + refine
     msglvl = 0
 
     # Set numper of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
@@ -64,8 +89,11 @@ function PardisoSolver()
     end
     PardisoSolver(pt, iparm, dparm, mtype, solver, phase, msglvl)
 end
-show(io::IO, ps::PardisoSolver) = print(io, string("PardisoSolver"))
-
+show(io::IO, ps::PardisoSolver) = print(io, string("PardisoSolver:\n",
+                                  "\tSolver: $(SOLVERS[get_solver(ps)])\n",
+                                  "\tMatrix type: $(MTYPES[get_mtype(ps)])\n",
+                                  "\tPhase: $(PHASES[get_phase(ps)])\n",
+                                  "\tNum processors: $(get_nprocs(ps))"))
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
 
 
@@ -88,21 +116,17 @@ get_mtype(ps::PardisoSolver) = ps.mtype
 set_iparm(ps::PardisoSolver, i::Int, v::Int) = ps.iparm[i] = v
 set_dparm(ps::PardisoSolver, i::Int, v::FloatingPoint) = ps.dparm[i] = v
 
-set_iparms(ps::PardisoSolver, iparms::Vector{Int}) = ps.iparm = convert(Vector{Int32}, iparms)
-set_dparms(ps::PardisoSolver, dparms::Vector{Float64}) = ps.dparm = copy(v)
-
 get_iparm(ps::PardisoSolver, i::Int) = ps.iparm[i]
 get_dparm(ps::PardisoSolver, i::Int) = ps.dparm[i]
 get_iparms(ps::PardisoSolver) = ps.iparm
 get_dparms(ps::PardisoSolver) = ps.dparm
-
 
 get_phase(ps::PardisoSolver) = ps.phase
 
 function set_phase(ps::PardisoSolver, v::Int)
     v in VALID_PHASES|| throw(ArgumentError(string(
                                     "Invalid phase, valid phases ",
-                                    "are $VALID_phaseS.")))
+                                    "are $VALID_PHASES.")))
     ps.phase = v
 end
 
@@ -115,14 +139,14 @@ function set_msglvl(ps::PardisoSolver, v::Int)
 end
 
 
-function init_pardiso(ps::PardisoSolver)
+function pardisoinit(ps::PardisoSolver)
     ERR = Int32[0]
     ccall(init, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Float64}, Ptr{Int32}),
           ps.pt, &ps.mtype, &ps.solver, ps.iparm, ps.dparm, ERR)
     error_check(ERR)
-    return 0
+    return
 end
 
 function solve{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
@@ -135,12 +159,15 @@ end
 function solve!{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
                               A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                               T::Symbol=:N)
-    init_pardiso(ps)
+    pardisoinit(ps)
 
     if (T != :N && T != :T)
-        throw(ErrorException("Only :T and :N are valid transpose symbols"))
+        throw(ArgumentError("Only :T and :N are valid transpose symbols"))
     end
 
+    # We need to set the transpose flag in PARDISO when we DON*T want
+    # a transpose in Julia because we are passing a CSC formatted
+    # matrix to PARDISO which expects a CSR matrix.
     if T == :N
       set_iparm(ps, 12, 1)
     end
@@ -151,6 +178,8 @@ end
 
 function pardiso{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
                                A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
+
+    dim_check(X, A, B)
 
     if Tv <: Complex && get_mtype(ps) in REAL_MTYPES
         throw(ErrorException("Complex matrix and real matrix type set"))
@@ -187,11 +216,76 @@ function pardiso{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
           &NRHS, ps.iparm, &ps.msglvl, B, X,
           ERR, ps.dparm)
 
+    error_check(ERR)
+    # Return X here or not? For now, return.
+    return X
+end
+
+# Different checks
+function printstats{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+                                  B::VecOrMat{Tv})
+    N = Int32(size(A, 2))
+    AA = A.nzval
+    IA = convert(Vector{Int32}, A.colptr)
+    JA = convert(Vector{Int32}, A.rowval)
+    NRHS = Int32(size(B, 2))
+    ERR = Int32[0]
+    if Tv <: Complex
+        f = pardiso_printstats_z
+      else
+        f = pardiso_printstats
+    end
+    ccall(f, Void,
+          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
+           Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
+           Ptr{Int32}),
+          &ps.mtype, &N, AA, IA, JA, &NRHS, B, ERR)
 
     error_check(ERR)
     return
 end
 
+function checkmatrix{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+                                    B::VecOrMat{Tv})
+    N = Int32(size(A, 1))
+    AA = A.nzval
+    IA = convert(Vector{Int32}, A.colptr)
+    JA = convert(Vector{Int32}, A.rowval)
+    ERR = Int32[0]
+
+    if Tv <: Complex
+        f = pardiso_chkmatrix_z
+    else
+        f = pardiso_chkmatrix
+    end
+
+    ccall(f, Void,
+          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
+           Ptr{Int32}, Ptr{Int32}),
+          &ps.mtype, &N, AA, IA,
+          JA, ERR)
+
+    error_check(ERR)
+    return
+end
+
+function checkvec{Tv <: FC}(B::VecOrMat{Tv})
+    N = Int32(size(B, 1))
+    NRHS = Int32(size(B, 2))
+    ERR = Int32[0]
+
+    if Tv <: Complex
+        f = pardiso_chkvec_z
+    else
+        f = pardiso_chkvec
+    end
+    ccall(f, Void,
+          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
+          &N, &NRHS, B, ERR)
+
+    error_check(ERR)
+    return
+end
 
 
 # Error checks
@@ -224,76 +318,6 @@ function error_check(err::Vector{Int32})
     if err == -103; error("Break-Down in Krylov-subspace iteration."); end
     return
 end
-
-# TODO: Update this to new API
-#=
-# Different checks
-function print_stats{Ti, Tv}(X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti},
-                     B::VecOrMat{Tv})
-    N = Int32(size(A, 2))
-    AA = A.nzval
-    IA = convert(Vector{Int32}, A.colptr)
-    JA = convert(Vector{Int32}, A.rowval)
-    NRHS = Int32(size(B, 2))
-    ERR = Int32[0]
-    if Tv <: Complex
-        ccall(pardiso_printstats_z, Void,
-              (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
-               Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
-               Ptr{Int32}),
-              mtype, &N, AA, IA, JA, &NRHS, B, ERR)
-    elseif Tv <: Real
-            ccall(pardiso_printstats, Void,
-          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
-           Ptr{Int32}),
-          mtype, &N, AA, IA, JA, &NRHS, B, ERR)
-    end
-    error_check(ERR)
-    return
-end
-
-function check_matrix{Ti, Tv}(A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
-    N = Int32(size(A, 1))
-    AA = A.nzval
-    IA = convert(Vector{Int32}, A.colptr)
-    JA = convert(Vector{Int32}, A.rowval)
-    ERR = Int32[0]
-
-    if Tv <: Complex
-        ccall(pardiso_chkmatrix_z, Void,
-             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
-              Ptr{Int32}, Ptr{Int32}),
-             mtype, &N, AA, IA, JA, ERR)
-    elseif Tv <: Real
-        ccall(pardiso_chkmatrix, Void,
-             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
-              Ptr{Int32}, Ptr{Int32}),
-             mtype, &N, AA, IA, JA, ERR)
-    end
-    error_check(ERR)
-    return
-end
-
-function check_vec{Tv}(B::VecOrMat{Tv})
-    N = Int32(size(B, 1))
-    NRHS = Int32(size(B, 2))
-    ERR = Int32[0]
-
-    if Tv <: Complex
-        ccall(pardiso_chkvec_z, Void,
-             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
-             &N, &NRHS, B, ERR)
-    elseif Tv <: Real
-        ccall(pardiso_chkvec_z, Void,
-             (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
-             &N, &NRHS, B, ERR)
-    end
-
-    error_check(ERR)
-    return
-end
-=#
 
 end # module
 
