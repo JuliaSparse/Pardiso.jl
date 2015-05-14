@@ -176,7 +176,6 @@ function pardiso{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
     NRHS = Int32(size(B, 2))
 
     # For now disable messages
-    msglvl = Int32(0)
     ERR = Int32[0]
     ccall(pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
