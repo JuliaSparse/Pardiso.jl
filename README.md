@@ -22,7 +22,7 @@ This section will explain how solve equations using `Pardiso.jl` with the defaul
 
 ## Creating the ParadisoSolver
 
-A `ParadisoSolver` is created with `ParadisoSolver()`. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` will be referred so as `ps` as if it was created like this:
+A `ParadisoSolver` is created with `ParadisoSolver()`. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` will be referred to as `ps` as if it was created like this:
 
 ```julia
 julia> ps = PardisoSolver()
