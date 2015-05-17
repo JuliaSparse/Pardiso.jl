@@ -143,6 +143,20 @@ pardiso(ps, X, A, B)
 ```
 which will not modify the `IPARM` and `DPARM` values.
 
+### MNUM, MAXFCT, PERM
+
+These are set and retrieved with the functions
+
+```julia
+set_mnum(ps, i)
+get_mnum(ps)
+
+set_maxfct(ps, i)
+get_maxfct(ps)
+
+get_perm(ps)
+set_perm(ps, perm) # Perm is a Vector{Integer}
+```
 
 ### PARDISO checkers
 
