@@ -10,6 +10,7 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 `Pardiso.jl` expects the following libraries to be loadable from within Julia with `dlopen`.
 
 * `libpardiso.so` - The PARDISO library.
+* `libblas.so` - A (fast) BLAS library.
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
 * `libgomp.so` - Library for OpenMP
 
