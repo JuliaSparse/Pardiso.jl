@@ -9,6 +9,8 @@ export PardisoSolver
 export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl
 export get_iparm, get_iparms, get_dparm, get_dparms
 export get_mtype, get_solver, get_phase, get_msglvl, get_nprocs
+export set_maxfct, set_perm, set_mnum
+export get_maxfct, get_perm, get_mnum
 export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 
@@ -39,28 +41,29 @@ const SOLVERS = Dict{Int, ASCIIString}()
 SOLVERS[0] = "Direct"
 SOLVERS[1] = "Iterative"
 
-const MTYPES = Dict{Int, ASCIIString}()
-MTYPES[1]  = "Real structurally symmetric"
-MTYPES[2]  = "Real symmetric positive definite"
-MTYPES[-2] = "Real symmetric indefinite"
-MTYPES[3]  = "Complex structurally symmetric"
-MTYPES[4]  = "Complex Hermitian postive definite"
-MTYPES[-4] = "Complex Hermitian indefinite"
-MTYPES[6]  = "Complex symmetric"
-MTYPES[11] = "Real nonsymmetric"
-MTYPES[13] = "Complex nonsymmetric"
+const MTYPES = Dict{Int, ASCIIString}(
+  1 => "Real structurally symmetric",
+  2 => "Real symmetric positive definite",
+ -2 => "Real symmetric indefinite",
+  3 => "Complex structurally symmetric",
+  4 => "Complex Hermitian postive definite",
+ -4 => "Complex Hermitian indefinite",
+  6 => "Complex symmetric",
+ 11 => "Real nonsymmetric",
+ 13 => "Complex nonsymmetric")
 
-const PHASES = Dict{Int, ASCIIString}()
-PHASES[12]  = "Analysis, numerical factorization"
-PHASES[13]  = "Analysis, numerical factorization, solve, iterative refinement"
-PHASES[22]  = "Numerical factorization"
-PHASES[-22] = "Selected Inversion"
-PHASES[23]  = "Numerical factorization, solve, iterative refinement"
-PHASES[33]  = "Solve, iterative refinement"
-PHASES[0]   = "Release internal memory for L and U matrix number MNUM"
-PHASES[-1]  = "Release all internal memory for all matrices"
+const PHASES = Dict{Int, ASCIIString}(
+ 11  => "Analysis",
+ 12  => "Analysis, numerical factorization",
+ 13  => "Analysis, numerical factorization, solve, iterative refinement",
+ 22  => "Numerical factorization",
+-22  => "Selected Inversion",
+ 23  => "Numerical factorization, solve, iterative refinement",
+ 33  => "Solve, iterative refinement",
+  0  => "Release internal memory for L and U matrix number MNUM",
+ -1  => "Release all internal memory for all matrices")
 
-typealias FC Union(Float64, Complex128)
+typealias PardisoTypes Union(Float64, Complex128)
 
 type PardisoSolver
     pt::Vector{Int}
@@ -70,6 +73,9 @@ type PardisoSolver
     solver::Int32
     phase::Int32
     msglvl::Int32
+    maxfct::Int32
+    mnum::Int32
+    perm::Vector{Int32}
 end
 
 function PardisoSolver()
@@ -87,7 +93,11 @@ function PardisoSolver()
     else
         iparm[3]= CPU_CORES
     end
-    PardisoSolver(pt, iparm, dparm, mtype, solver, phase, msglvl)
+    mnum = 1
+    maxfct = 1
+    perm = Int32[]
+    PardisoSolver(pt, iparm, dparm, mtype, solver,
+                  phase, msglvl, maxfct, mnum, perm)
 end
 show(io::IO, ps::PardisoSolver) = print(io, string("PardisoSolver:\n",
                                   "\tSolver: $(SOLVERS[get_solver(ps)])\n",
@@ -98,43 +108,52 @@ get_nprocs(ps::PardisoSolver) = ps.iparm[3]
 
 
 # Getters and setters
-function set_solver(ps::PardisoSolver, v::Int)
-    v in VALID_SOLVERS || throw(ArgumentError(string("Invalid solver, valid solvers are 0 for",
+function set_solver(ps::PardisoSolver, v::Integer)
+    v in VALID_SOLVERS || throw(ArgumentError(string("invalid solver, valid solvers are 0 for",
                         " sparse direct solver, 1 for multi-recursive iterative solver")))
     ps.solver = v
 end
 get_solver(ps::PardisoSolver) = ps.solver
 
-function set_mtype(ps::PardisoSolver, v::Int)
+function set_mtype(ps::PardisoSolver, v::Integer)
     v in VALID_MTYPES || throw(ArgumentError(string(
-                                    "Invalid matrix type, valid matrix ",
-                                    "types are $VALID_MTYPES.")))
+                                    "invalid matrix type, valid matrix ",
+                                    "types are $VALID_MTYPES")))
     ps.mtype = v
 end
 get_mtype(ps::PardisoSolver) = ps.mtype
 
-set_iparm(ps::PardisoSolver, i::Int, v::Int) = ps.iparm[i] = v
-set_dparm(ps::PardisoSolver, i::Int, v::FloatingPoint) = ps.dparm[i] = v
-
-get_iparm(ps::PardisoSolver, i::Int) = ps.iparm[i]
-get_dparm(ps::PardisoSolver, i::Int) = ps.dparm[i]
+get_iparm(ps::PardisoSolver, i::Integer) = ps.iparm[i]
 get_iparms(ps::PardisoSolver) = ps.iparm
+set_iparm(ps::PardisoSolver, i::Integer, v::Integer) = ps.iparm[i] = v
+
+get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
+set_dparm(ps::PardisoSolver, i::Integer, v::FloatingPoint) = ps.dparm[i] = v
+
+get_mnum(ps::PardisoSolver) = ps.mnum
+set_mnum(ps::PardisoSolver, mnum::Integer) = ps.mnum = mnum
+
+get_maxfct(ps::PardisoSolver) = ps.maxfct
+set_maxfct(ps::PardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
+
+get_perm(ps::PardisoSolver) = ps.perm
+set_perm{T <: Integer}(ps::PardisoTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
 
 get_phase(ps::PardisoSolver) = ps.phase
 
-function set_phase(ps::PardisoSolver, v::Int)
+function set_phase(ps::PardisoSolver, v::Integer)
     v in VALID_PHASES|| throw(ArgumentError(string(
-                                    "Invalid phase, valid phases ",
-                                    "are $VALID_PHASES.")))
+                                    "invalid phase, valid phases ",
+                                    "are $VALID_PHASES")))
     ps.phase = v
 end
 
 get_msglvl(ps::PardisoSolver) = ps.msglvl
-function set_msglvl(ps::PardisoSolver, v::Int)
+function set_msglvl(ps::PardisoSolver, v::Integer)
     v in VALID_MSGLVLS || throw(ArgumentError(string(
-                                "Invalid message level, valid message levels ",
-                                "are $VALID_MSGLVLS.")))
+                                "invalid message level, valid message levels ",
+                                "are $VALID_MSGLVLS")))
     ps.msglvl = v
 end
 
@@ -149,20 +168,20 @@ function pardisoinit(ps::PardisoSolver)
     return
 end
 
-function solve{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                             B::VecOrMat{Tv}, T::Symbol=:N)
+function solve{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+                                       B::VecOrMat{Tv}, T::Symbol=:N)
   X = copy(B)
   solve!(ps, X, A, B, T)
   return X
 end
 
-function solve!{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
-                              A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
-                              T::Symbol=:N)
+function solve!{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
+                                        A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
+                                        T::Symbol=:N)
     pardisoinit(ps)
 
     if (T != :N && T != :T)
-        throw(ArgumentError("Only :T and :N are valid transpose symbols"))
+        throw(ArgumentError("only :T and :N are valid transpose symbols"))
     end
 
     # We need to set the transpose flag in PARDISO when we DON*T want
@@ -172,26 +191,31 @@ function solve!{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
       set_iparm(ps, 12, 1)
     end
 
+    original_type = get_phase(ps)
     pardiso(ps, X, A, B)
+
+    # Release memory, TODO: We are running the convert on IA and JA here
+    # again which is unnecessary.
+    set_phase(ps, -1)
+    pardiso(ps, X, A, B)
+    set_phase(ps, original_type)
     return X
 end
 
-function pardiso{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
-                               A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
+function pardiso{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
+                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
 
     dim_check(X, A, B)
 
     if Tv <: Complex && get_mtype(ps) in REAL_MTYPES
-        throw(ErrorException("Complex matrix and real matrix type set"))
+        throw(ErrorException(string("input matrix is complex while PardisoSolver ",
+                                    "has a real matrix type set")))
     end
 
     if Tv <: Real && get_mtype(ps) in COMPLEX_MTYPES
-        throw(ErrorException("Real matrix and complex matrix type set"))
+        throw(ErrorException(string("input matrix is real while PardisoSolver ",
+                                    "has a complex matrix type set")))
     end
-
-    # For now only support one factorization
-    MAXFCT = Int32(1)
-    MNUM = Int32(1)
 
     N = Int32(size(A, 2))
 
@@ -199,20 +223,16 @@ function pardiso{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
 
-    # For now don't support user fill-in reducing order
-    PERM = Int32[]
-
     NRHS = Int32(size(B, 2))
 
-    # For now disable messages
     ERR = Int32[0]
     ccall(pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
-          ps.pt, &MAXFCT, &MNUM, &ps.mtype, &ps.phase,
-          &N, AA, IA, JA, PERM,
+          ps.pt, &ps.maxfct, &ps.mnum, &ps.mtype, &ps.phase,
+          &N, AA, IA, JA, ps.perm,
           &NRHS, ps.iparm, &ps.msglvl, B, X,
           ERR, ps.dparm)
 
@@ -221,9 +241,10 @@ function pardiso{Ti, Tv <: FC}(ps::PardisoSolver, X::VecOrMat{Tv},
     return X
 end
 
+
 # Different checks
-function printstats{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                                  B::VecOrMat{Tv})
+function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+                                            B::VecOrMat{Tv})
     N = Int32(size(A, 2))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -245,8 +266,7 @@ function printstats{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
     return
 end
 
-function checkmatrix{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                                    B::VecOrMat{Tv})
+function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
     N = Int32(size(A, 1))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -269,7 +289,7 @@ function checkmatrix{Ti, Tv <: FC}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti}
     return
 end
 
-function checkvec{Tv <: FC}(B::VecOrMat{Tv})
+function checkvec{Tv <: PardisoTypes}(B::VecOrMat{Tv})
     N = Int32(size(B, 1))
     NRHS = Int32(size(B, 2))
     ERR = Int32[0]
@@ -301,21 +321,21 @@ end
 
 function error_check(err::Vector{Int32})
     err = err[1]
-    if err == -1  ; error("Input inconsistent."); end
-    if err == -2  ; error("Not enough memory."); end
-    if err == -3  ; error("Reordering problem."); end
-    if err == -4  ; error("Zero pivot, numerical fact. or iterative refinement problem."); end
-    if err == -5  ; error("Unclassified (internal) error."); end
-    if err == -6  ; error("Preordering failed (matrix types 11, 13 only)."); end
-    if err == -7  ; error("Diagonal matrix problem."); end
-    if err == -8  ; error("32-bit integer overflow problem."); end
-    if err == -10 ; error("No license file pardiso.lic found."); end
-    if err == -11 ; error("License is expired."); end
-    if err == -12 ; error("Wrong username or hostname."); end
-    if err == -100; error("Reached maximum number of Krylov-subspace iteration in iterative solver."); end
-    if err == -101; error("No sufficient convergence in Krylov-subspace iteration within 25 iterations."); end
-    if err == -102; error("Error in Krylov-subspace iteration."); end
-    if err == -103; error("Break-Down in Krylov-subspace iteration."); end
+    err != -1  || throw(ErrorException("Input inconsistent."))
+    err != -2  || throw(ErrorException("Not enough memory."))
+    err != -3  || throw(ErrorException("Reordering problem."))
+    err != -4  || throw(ErrorException("Zero pivot, numerical fact. or iterative refinement problem."))
+    err != -5  || throw(ErrorException("Unclassified (internal) error."))
+    err != -6  || throw(ErrorException("Preordering failed (matrix types 11, 13 only)."))
+    err != -7  || throw(ErrorException("Diagonal matrix problem."))
+    err != -8  || throw(ErrorException("32-bit integer overflow problem."))
+    err != -10 || throw(ErrorException("No license file pardiso.lic found."))
+    err != -11 || throw(ErrorException("License is expired."))
+    err != -12 || throw(ErrorException("Wrong username or hostname."))
+    err != -100|| throw(ErrorException("Reached maximum number of Krylov-subspace iteration in iterative solver."))
+    err != -101|| throw(ErrorException("No sufficient convergence in Krylov-subspace iteration within 25 iterations."))
+    err != -102|| throw(ErrorException("Error in Krylov-subspace iteration."))
+    err != -103|| throw(ErrorException("Break-Down in Krylov-subspace iteration."))
     return
 end
 

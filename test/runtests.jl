@@ -15,7 +15,7 @@ let
     X = zeros(10, 2)
 
     printstats(ps, A, B)
-    checkmatrix(ps, A, B)
+    checkmatrix(ps, A)
     checkvec(B)
 
     solve!(ps, X, A, B)
@@ -68,7 +68,7 @@ let
     X = zeros(Complex128, 10, 2)
 
     printstats(ps, A, B)
-    checkmatrix(ps, A, B)
+    checkmatrix(ps, A)
     checkvec(B)
 
     solve!(ps, X, A, B)
