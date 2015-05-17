@@ -191,14 +191,14 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
       set_iparm(ps, 12, 1)
     end
 
-    original_type = get_phase(ps)
+    original_phase = get_phase(ps)
     pardiso(ps, X, A, B)
 
     # Release memory, TODO: We are running the convert on IA and JA here
     # again which is unnecessary.
     set_phase(ps, -1)
     pardiso(ps, X, A, B)
-    set_phase(ps, original_type)
+    set_phase(ps, original_phase)
     return X
 end
 
