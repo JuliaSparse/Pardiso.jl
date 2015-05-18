@@ -15,27 +15,30 @@ export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 
 # Libraries
-const libblas= Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+# Check if found mkl blas => mkl
+
 const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
 const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
 
-# Pardiso functions
-const init = Libdl.dlsym(libpardiso, "pardisoinit")
-const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
-const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
-const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
-const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
-const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
-const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
-const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
-const VALID_MTYPES = [1, 2, -2, 3, 4, -4, 6, 11, 13]
-const REAL_MTYPES = [1, 2, -2, 11]
-const COMPLEX_MTYPES = [3, 4, -4, 6, 13]
-const VALID_SOLVERS = [0, 1]
-const VALID_PHASES= [11, 12, 13, 22, -22, 23, 33, 0, -1]
-const VALID_MSGLVLS = [0, 1]
+try
+    const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
+    include("pardiso.jl")
+catch SymbolError
+    warn("Did not load official Pardiso library")
+end
+
+# if blas lib == MKL:
+try
+    const mkl_libpardiso = Libdl.dlopen("mkllibpardiso", Libdl.RTLD_GLOBAL)
+    include("mkl_pardiso.jl")
+catch jsfoigidsj
+  warn("?")
+end
+#
+
+
 
 const SOLVERS = Dict{Int, ASCIIString}()
 SOLVERS[0] = "Direct"
@@ -65,28 +68,17 @@ const PHASES = Dict{Int, ASCIIString}(
 
 typealias PardisoTypes Union(Float64, Complex128)
 
-type PardisoSolver
-    pt::Vector{Int}
-    iparm:: Vector{Int32}
-    dparm::Vector{Float64}
-    mtype::Int32
-    solver::Int32
-    phase::Int32
-    msglvl::Int32
-    maxfct::Int32
-    mnum::Int32
-    perm::Vector{Int32}
-end
 
-function PardisoSolver()
+abstract AbstractPardisoSolver
+
+function call{T <: Union(PardisoSolver, MKLPardisoSolover)}(Type{T})
+
     pt = zeros(Int, 64)
     iparm = zeros(Int32, 64)
-    dparm = zeros(Float64, 64)
     mtype = 11 # Default to real unsymmetric matrices
     solver = 0 # Default to direct solver
     phase = 13 # Default to analysis + fact + solve + refine
     msglvl = 0
-
     # Set numper of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
     if ("OMP_NUM_THREADS" in keys(ENV))
         iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
@@ -96,15 +88,24 @@ function PardisoSolver()
     mnum = 1
     maxfct = 1
     perm = Int32[]
-    PardisoSolver(pt, iparm, dparm, mtype, solver,
-                  phase, msglvl, maxfct, mnum, perm)
+    if T == PardisoSolver
+        dparm = zeros(Float64, 64)
+        PardisoSolver(pt, iparm, dparm, mtype, solver,
+                      phase, msglvl, maxfct, mnum, perm)
+
+    elseif T == MKLPardisoSolover
+        MKLPardisoSolover(pt, iparm, mtype, solver,
+                          phase, msglvl, maxfct, mnum, perm)
+    end
 end
-show(io::IO, ps::PardisoSolver) = print(io, string("PardisoSolver:\n",
+
+
+show(io::IO, ps::AbstractPardisoSolver) = print(io, string("$ps:\n",
                                   "\tSolver: $(SOLVERS[get_solver(ps)])\n",
                                   "\tMatrix type: $(MTYPES[get_mtype(ps)])\n",
                                   "\tPhase: $(PHASES[get_phase(ps)])\n",
                                   "\tNum processors: $(get_nprocs(ps))"))
-get_nprocs(ps::PardisoSolver) = ps.iparm[3]
+get_nprocs(ps::AbstractPardisoSolver) = ps.iparm[3]
 
 
 # Getters and setters
@@ -121,36 +122,33 @@ function set_mtype(ps::PardisoSolver, v::Integer)
                                     "types are $VALID_MTYPES")))
     ps.mtype = v
 end
-get_mtype(ps::PardisoSolver) = ps.mtype
+get_mtype(ps::AbstractPardisoSolver) = ps.mtype
 
-get_iparm(ps::PardisoSolver, i::Integer) = ps.iparm[i]
-get_iparms(ps::PardisoSolver) = ps.iparm
-set_iparm(ps::PardisoSolver, i::Integer, v::Integer) = ps.iparm[i] = v
+get_iparm(ps::AbstractPardisoSolver, i::Integer) = ps.iparm[i]
+get_iparms(ps::AbstractPardisoSolver) = ps.iparm
+set_iparm(ps::AbstractPardisoSolver, i::Integer, v::Integer) = ps.iparm[i] = v
 
-get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
-get_dparms(ps::PardisoSolver) = ps.dparm
-set_dparm(ps::PardisoSolver, i::Integer, v::FloatingPoint) = ps.dparm[i] = v
 
-get_mnum(ps::PardisoSolver) = ps.mnum
-set_mnum(ps::PardisoSolver, mnum::Integer) = ps.mnum = mnum
+get_mnum(ps::AbstractPardisoSolver) = ps.mnum
+set_mnum(ps::AbstractPardisoSolver, mnum::Integer) = ps.mnum = mnum
 
-get_maxfct(ps::PardisoSolver) = ps.maxfct
-set_maxfct(ps::PardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
+get_maxfct(ps::AbstractPardisoSolver) = ps.maxfct
+set_maxfct(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
 
-get_perm(ps::PardisoSolver) = ps.perm
+get_perm(ps::AbstractPardisoSolver) = ps.perm
 set_perm{T <: Integer}(ps::PardisoTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
 
-get_phase(ps::PardisoSolver) = ps.phase
+get_phase(ps::AbstractPardisoSolver) = ps.phase
 
-function set_phase(ps::PardisoSolver, v::Integer)
+function set_phase(ps::AbstractPardisoSolver, v::Integer)
     v in VALID_PHASES|| throw(ArgumentError(string(
                                     "invalid phase, valid phases ",
                                     "are $VALID_PHASES")))
     ps.phase = v
 end
 
-get_msglvl(ps::PardisoSolver) = ps.msglvl
-function set_msglvl(ps::PardisoSolver, v::Integer)
+get_msglvl(ps::AbstractPardisoSolver) = ps.msglvl
+function set_msglvl(ps::AbstractPardisoSolver, v::Integer)
     v in VALID_MSGLVLS || throw(ArgumentError(string(
                                 "invalid message level, valid message levels ",
                                 "are $VALID_MSGLVLS")))
@@ -158,15 +156,11 @@ function set_msglvl(ps::PardisoSolver, v::Integer)
 end
 
 
-function pardisoinit(ps::PardisoSolver)
-    ERR = Int32[0]
-    ccall(init, Void,
-          (Ptr{Int}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Float64}, Ptr{Int32}),
-          ps.pt, &ps.mtype, &ps.solver, ps.iparm, ps.dparm, ERR)
-    error_check(ERR)
+function pardisoinit(ps::AbstractPardisoSolver)
+    ccall_pardisoinit(ps)
     return
 end
+
 
 function solve{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                                        B::VecOrMat{Tv}, T::Symbol=:N)
@@ -175,7 +169,7 @@ function solve{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv,
   return X
 end
 
-function solve!{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
+function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                                         T::Symbol=:N)
     pardisoinit(ps)
@@ -225,86 +219,10 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
 
     NRHS = Int32(size(B, 2))
 
-    ERR = Int32[0]
-    ccall(pardiso_f, Void,
-          (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
-           Ptr{Int32}, Ptr{Float64}),
-          ps.pt, &ps.maxfct, &ps.mnum, &ps.mtype, &ps.phase,
-          &N, AA, IA, JA, ps.perm,
-          &NRHS, ps.iparm, &ps.msglvl, B, X,
-          ERR, ps.dparm)
+    ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 
-    error_check(ERR)
     # Return X here or not? For now, return.
     return X
-end
-
-
-# Different checks
-function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                                            B::VecOrMat{Tv})
-    N = Int32(size(A, 2))
-    AA = A.nzval
-    IA = convert(Vector{Int32}, A.colptr)
-    JA = convert(Vector{Int32}, A.rowval)
-    NRHS = Int32(size(B, 2))
-    ERR = Int32[0]
-    if Tv <: Complex
-        f = pardiso_printstats_z
-      else
-        f = pardiso_printstats
-    end
-    ccall(f, Void,
-          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
-           Ptr{Int32}),
-          &ps.mtype, &N, AA, IA, JA, &NRHS, B, ERR)
-
-    error_check(ERR)
-    return
-end
-
-function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
-    N = Int32(size(A, 1))
-    AA = A.nzval
-    IA = convert(Vector{Int32}, A.colptr)
-    JA = convert(Vector{Int32}, A.rowval)
-    ERR = Int32[0]
-
-    if Tv <: Complex
-        f = pardiso_chkmatrix_z
-    else
-        f = pardiso_chkmatrix
-    end
-
-    ccall(f, Void,
-          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}),
-          &ps.mtype, &N, AA, IA,
-          JA, ERR)
-
-    error_check(ERR)
-    return
-end
-
-function checkvec{Tv <: PardisoTypes}(B::VecOrMat{Tv})
-    N = Int32(size(B, 1))
-    NRHS = Int32(size(B, 2))
-    ERR = Int32[0]
-
-    if Tv <: Complex
-        f = pardiso_chkvec_z
-    else
-        f = pardiso_chkvec
-    end
-    ccall(f, Void,
-          (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
-          &N, &NRHS, B, ERR)
-
-    error_check(ERR)
-    return
 end
 
 
@@ -319,7 +237,7 @@ function dim_check(X, A, B)
 end
 
 
-function error_check(err::Vector{Int32})
+function check_error(err::Vector{Int32})
     err = err[1]
     err != -1  || throw(ErrorException("Input inconsistent."))
     err != -2  || throw(ErrorException("Not enough memory."))
