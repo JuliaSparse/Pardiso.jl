@@ -1,4 +1,15 @@
-# MKL Pardiso functions
+try
+   Libdl.dlopen("libmkl_gf_lp64", Libdl.RTLD_GLOBAL)
+   Libdl.dlopen("libmkl_sequential", Libdl.RTLD_GLOBAL)
+   Libdl.dlopen("libmkl_intel_lp64", Libdl.RTLD_GLOBAL)
+   Libdl.dlopen("libmkl_intel_thread.so ", Libdl.RTLD_GLOBAL)
+
+   global const libmkl_core = Libdl.dlopen("libmkl_core", Libdl.RTLD_GLOBAL)
+   global const MKL_PARDISO_LOADED = true
+catch
+  global const MKL_PARDISO_LOADED = false
+end
+
 if MKL_PARDISO_LOADED
     global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
     global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
@@ -33,7 +44,7 @@ end
 
 function MKLPardisoSolver()
     if !MKL_PARDISO_LOADED
-        error("MKL Pardiso library could not be loaded")
+        error("mkl library was not be loaded")
     end
 
     pt = zeros(Int, 64)
@@ -58,6 +69,8 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
+
+set_transposed(ps::MKLPardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 2) : set_iparm(ps, 12, 0)
 
 @inline function ccall_pardisoinit(ps::MKLPardisoSolver)
     ccall(mkl_init, Void,

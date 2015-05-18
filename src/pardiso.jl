@@ -1,13 +1,27 @@
 # Pardiso functions
-const init = Libdl.dlsym(libpardiso, "pardisoinit")
-const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
-const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
-const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
-const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
-const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
-const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
-const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+try
+    global const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
+    global const PARDISO_LOADED = true
+catch
+    global const PARDISO_LOADED = false
+end
 
+if PARDISO_LOADED
+    const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+    const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+    const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+end
+
+if PARDISO_LOADED
+    const init = Libdl.dlsym(libpardiso, "pardisoinit")
+    const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
+    const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
+    const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
+    const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
+    const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
+    const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
+    const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+end
 
 const VALID_SOLVERS = [0, 1]
 
@@ -44,7 +58,7 @@ end
 
 function PardisoSolver()
     if !PARDISO_LOADED
-      error("Pardiso library was not be loaded")
+      error("pardiso library was not loaded")
     end
 
     pt = zeros(Int, 64)
@@ -79,6 +93,8 @@ show(io::IO, ps::PardisoSolver) = print(io, string("$PardisoSolver:\n",
 
 valid_phases(ps::PardisoSolver) = keys(PHASES)
 phases(ps::PardisoSolver) = PHASES
+
+set_transposed(ps::PardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 1) : set_iparm(ps, 12, 0)
 
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
