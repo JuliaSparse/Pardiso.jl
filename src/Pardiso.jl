@@ -19,32 +19,6 @@ const REAL_MTYPES = [1, 2, -2, 11]
 const COMPLEX_MTYPES = [3, 4, -4, 6, 13]
 const VALID_MSGLVLS = [0, 1]
 
-# Libraries
-const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-
-
-try
-    global const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
-    global const PARDISO_LOADED = true
-catch
-    global const PARDISO_LOADED = false
-end
-
-try
-   Libdl.dlopen("libmkl_gf_lp64", Libdl.RTLD_GLOBAL)
-   Libdl.dlopen("libmkl_sequential", Libdl.RTLD_GLOBAL)
-   Libdl.dlopen("libmkl_intel_lp64", Libdl.RTLD_GLOBAL)
-   Libdl.dlopen("libmkl_intel_thread.so ", Libdl.RTLD_GLOBAL)
-
-   global const libmkl_core = Libdl.dlopen("libmkl_core", Libdl.RTLD_GLOBAL)
-   global const MKL_PARDISO_LOADED = true
-catch
-  global const MKL_PARDISO_LOADED = false
-end
-
-
 
 const MTYPES = Dict{Int, ASCIIString}(
   1 => "Real structurally symmetric",
@@ -65,19 +39,13 @@ abstract AbstractPardisoSolver
 include("pardiso.jl")
 include("mkl_pardiso.jl")
 
-
-
-
 # Getters and setters
-
-
 function set_mtype(ps::PardisoSolver, v::Integer)
     v in VALID_MTYPES || throw(ArgumentError(string(
                                     "invalid matrix type, valid matrix ",
                                     "types are $VALID_MTYPES")))
     ps.mtype = v
 end
-
 get_mtype(ps::AbstractPardisoSolver) = ps.mtype
 
 get_iparm(ps::AbstractPardisoSolver, i::Integer) = ps.iparm[i]
@@ -137,12 +105,11 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
     if T == :N
-        if typeof(ps) == MKLPardisoSolver
-            set_iparm(ps, 12, 2)
-        else
-            set_iparm(ps, 12, 1)
-        end
+        set_transposed(ps, true)
+    else
+        set_transposed(ps, false)
     end
+
 
     original_phase = get_phase(ps)
     pardiso(ps, X, A, B)
