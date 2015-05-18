@@ -16,7 +16,7 @@ let
 
     printstats(ps, A, B)
     checkmatrix(ps, A)
-    checkvec(B)
+    checkvec(ps, B)
 
     solve!(ps, X, A, B)
     @test_approx_eq X A\B
@@ -69,7 +69,7 @@ let
 
     printstats(ps, A, B)
     checkmatrix(ps, A)
-    checkvec(B)
+    checkvec(ps, B)
 
     solve!(ps, X, A, B)
     @test_approx_eq X A\B
