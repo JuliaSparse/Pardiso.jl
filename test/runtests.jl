@@ -2,42 +2,54 @@ using Pardiso
 using Base.Test
 
 srand(1234)
-
+ENV["OMP_NUM_THREADS"] = 1
 # Test solver + checkers for real matrices
 let
-    ps = PardisoSolver()
-    pardisoinit(ps)
-    set_mtype(ps, 11)
-    set_solver(ps, 0)
+for pardiso_type in [PardisoSolver, MKLPardisoSolver]
+    for data_type in [Float64, Complex128]
+        ps = pardiso_type()
+        pardisoinit(ps)
 
-    A = sparse(rand(10,10))
-    B = rand(10, 2)
-    X = zeros(10, 2)
+        if data_type == Float64
+            set_mtype(ps, 11)
+        else
+            set_mtype(ps, 13)
+        end
 
-    printstats(ps, A, B)
-    checkmatrix(ps, A)
-    checkvec(ps, B)
+        A = sparse(rand(data_type, 10,10))
+        B = rand(data_type, 10, 2)
+        X = similar(B)
 
-    solve!(ps, X, A, B)
-    @test_approx_eq X A\B
-    fill!(X, 0.0)
+        if pardiso_type == PardisoSolver
+            printstats(ps, A, B)
+            checkmatrix(ps, A)
+            checkvec(ps, B)
+        end
 
-    X = solve(ps, A, B)
-    @test_approx_eq X A\B
-    fill!(X, 0.0)
+        solve!(ps, X, A, B)
+        @test_approx_eq X A\B
+        fill!(X, 0.0)
 
-    solve!(ps, X, A, B, :T)
-    @test_approx_eq X A'\B
-    fill!(X, 0.0)
+        X = solve(ps, A, B)
+        @test_approx_eq X A\B
+        fill!(X, 0.0)
 
-    X = solve(ps, A, B, :T)
-    @test_approx_eq X A'\B
-    fill!(X, 0.0)
+        solve!(ps, X, A, B, :T)
+        @test_approx_eq X A'\B
+        fill!(X, 0.0)
+
+        X = solve(ps, A, B, :T)
+        @test_approx_eq X A'\B
+        fill!(X, 0.0)
+    end
+end
 end
 
 # Test some errors
 let
-    ps = PardisoSolver()
+for pardiso_type in [PardisoSolver, MKLPardisoSolver]
+
+    ps = pardiso_type()
 
     A = sparse(rand(10,10))
     B = rand(10, 2)
@@ -55,43 +67,11 @@ let
     B = rand(12, 2)
     @test_throws DimensionMismatch solve(ps, A, B)
 end
-
-# Test solver + checkers for complex matrices
-let
-    ps = PardisoSolver()
-    pardisoinit(ps)
-    set_mtype(ps, 13)
-    set_solver(ps, 0)
-
-    A = sparse(rand(Complex128, 10, 10))
-    B = rand(Complex128, 10, 2)
-    X = zeros(Complex128, 10, 2)
-
-    printstats(ps, A, B)
-    checkmatrix(ps, A)
-    checkvec(ps, B)
-
-    solve!(ps, X, A, B)
-    @test_approx_eq X A\B
-    fill!(X, zero(Complex128))
-
-    X = solve(ps, A, B)
-    @test_approx_eq X A\B
-    fill!(X, zero(Complex128))
-
-    solve!(ps, X, A, B, :T)
-    @test_approx_eq X A.'\B
-    fill!(X, zero(Complex128))
-
-    X = solve(ps, A, B, :T)
-    @test_approx_eq X A.'\B
-    fill!(X, zero(Complex128))
-
-    set_mtype(ps, 11)
-    @test_throws ErrorException pardiso(ps, X, A, B)
 end
 
+
 let
+for pardiso_type in [PardisoSolver, MKLPardisoSolver]
     ps = PardisoSolver()
     set_iparm(ps, 1, 0)
     pardisoinit(ps)
@@ -119,4 +99,5 @@ let
 
     set_msglvl(ps, 1)
     @test get_msglvl(ps) == 1
+end
 end
