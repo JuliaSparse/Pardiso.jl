@@ -15,7 +15,7 @@ export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 
 # Libraries
-const libblas= Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+const libblas= Libdl.dlopen("/home/kristoffer/Downloads/OpenBLAS/libopenblas", Libdl.RTLD_GLOBAL)
 const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
 const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
 const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
@@ -237,8 +237,6 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
           ERR, ps.dparm)
 
     error_check(ERR)
-    # Return X here or not? For now, return.
-    return X
 end
 
 
