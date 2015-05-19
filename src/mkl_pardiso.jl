@@ -104,8 +104,8 @@ end
     check_error(ps, ERR)
 end
 
-function check_error(ps::MKLPardisoSolver, err::Vector{Int32})
-    err = err[1]
+function check_error(ps::MKLPardisoSolver, errv::Vector{Int32})
+    err = errv[1]
     err != -1  || throw(PardisoException("Input inconsistent."))
     err != -2  || throw(PardisoException("Not enough memory."))
     err != -3  || throw(PardisoException("Reordering problem."))
