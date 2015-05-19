@@ -14,6 +14,7 @@ For PARDISO 5.0 the following libraries should be loadable from within Julia wit
 
 * `libpardiso.so` - The PARDISO library.
 * `libblas.so` - A (fast) BLAS library.
+* `liblapack.so` - A LAPACK library.
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
 * `libgomp.so` - Library for OpenMP
 
