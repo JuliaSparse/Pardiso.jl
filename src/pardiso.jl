@@ -8,6 +8,7 @@ end
 
 if PARDISO_LOADED
     const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+    const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
     const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
     const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
 end
@@ -198,8 +199,8 @@ function checkvec{Tv <: PardisoTypes}(ps, B::VecOrMat{Tv})
     return
 end
 
-function check_error(ps::PardisoSolver, err::Vector{Int32})
-    err = err[1]
+function check_error(ps::PardisoSolver, errv::Vector{Int32})
+    err = errv[1]
     err != -1  || throw(PardisoException("Input inconsistent."))
     err != -2  || throw(PardisoException("Not enough memory."))
     err != -3  || throw(PardisoException("Reordering problem."))

@@ -51,7 +51,7 @@ end
 
 function MKLPardisoSolver()
     if !MKL_PARDISO_LOADED
-        error("mkl library was not be loaded")
+        error("mkl library was not loaded")
     end
 
     pt = zeros(Int, 64)
@@ -79,8 +79,6 @@ get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MK
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
-set_transposed(ps::MKLPardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 2) : set_iparm(ps, 12, 0)
-
 @inline function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Int32[1]
     ccall(mkl_init, Void,
@@ -104,8 +102,8 @@ end
     check_error(ps, ERR)
 end
 
-function check_error(ps::MKLPardisoSolver, err::Vector{Int32})
-    err = err[1]
+function check_error(ps::MKLPardisoSolver, errv::Vector{Int32})
+    err = errv[1]
     err != -1  || throw(PardisoException("Input inconsistent."))
     err != -2  || throw(PardisoException("Not enough memory."))
     err != -3  || throw(PardisoException("Reordering problem."))

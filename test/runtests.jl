@@ -1,11 +1,21 @@
 using Pardiso
 using Base.Test
+using Base.SparseMatrix
 
 srand(1234)
 ENV["OMP_NUM_THREADS"] = 1
+
+psolvers = DataType[]
+Pardiso.MKL_PARDISO_LOADED && push!(psolvers, MKLPardisoSolver)
+Pardiso.PARDISO_LOADED && push!(psolvers, PardisoSolver)
+
+if length(psolvers) == 0
+    error("No Pardiso library managed to load. Unable to run tests.")
+end
+
 # Test solver + checkers for real matrices
 let
-for pardiso_type in [PardisoSolver, MKLPardisoSolver]
+for pardiso_type in psolvers
     for data_type in [Float64, Complex128]
         ps = pardiso_type()
         pardisoinit(ps)
@@ -16,44 +26,57 @@ for pardiso_type in [PardisoSolver, MKLPardisoSolver]
             set_mtype(ps, 13)
         end
 
-        A = sparse(rand(data_type, 10,10))
+        A1 = sparse(rand(data_type, 10,10))
         B = rand(data_type, 10, 2)
         X = similar(B)
 
-        if pardiso_type == PardisoSolver
-            printstats(ps, A, B)
-            checkmatrix(ps, A)
-            checkvec(ps, B)
+        # Test unsymmetric, symmetric indef and symmetric posdef
+        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, A1 + A1.']
+
+            solve!(ps, X, A, B)
+            @test_approx_eq X A\B
+            fill!(X, 0.0)
+
+            X = solve(ps, A, B)
+            @test_approx_eq X A\B
+            fill!(X, 0.0)
+
+            solve!(ps, X, A, B, :C)
+            @test_approx_eq X A'\B
+            fill!(X, 0.0)
+
+            X = solve(ps, A, B, :C)
+            @test_approx_eq X A'\B
+            fill!(X, 0.0)
+
+            solve!(ps, X, A, B, :T)
+            @test_approx_eq X A.'\B
+            fill!(X, 0.0)
+
+            X = solve(ps, A, B, :T)
+            @test_approx_eq X A.'\B
+            fill!(X, 0.0)
         end
-
-        solve!(ps, X, A, B)
-        @test_approx_eq X A\B
-        fill!(X, 0.0)
-
-        X = solve(ps, A, B)
-        @test_approx_eq X A\B
-        fill!(X, 0.0)
-
-        solve!(ps, X, A, B, :T)
-        @test_approx_eq X A'\B
-        fill!(X, 0.0)
-
-        X = solve(ps, A, B, :T)
-        @test_approx_eq X A'\B
-        fill!(X, 0.0)
     end
 end
 end
 
 # Test some errors
 let
-for pardiso_type in [PardisoSolver, MKLPardisoSolver]
+for pardiso_type in psolvers
 
     ps = pardiso_type()
 
     A = sparse(rand(10,10))
     B = rand(10, 2)
     X = rand(10, 2)
+
+    if pardiso_type == PardisoSolver
+        printstats(ps, A, B)
+        checkmatrix(ps, A)
+        checkvec(ps, B)
+    end
+
 
     set_mtype(ps, 13)
     @test_throws ErrorException pardiso(ps, X, A, B)
@@ -71,7 +94,7 @@ end
 
 
 let
-for pardiso_type in [PardisoSolver, MKLPardisoSolver]
+for pardiso_type in psolvers
     ps = PardisoSolver()
     set_iparm(ps, 1, 0)
     pardisoinit(ps)

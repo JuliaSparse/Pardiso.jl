@@ -14,6 +14,7 @@ For PARDISO 5.0 the following libraries should be loadable from within Julia wit
 
 * `libpardiso.so` - The PARDISO library.
 * `libblas.so` - A (fast) BLAS library.
+* `liblapack.so` - A LAPACK library.
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
 * `libgomp.so` - Library for OpenMP
 
@@ -28,7 +29,7 @@ This section will explain how solve equations using `Pardiso.jl` with the defaul
 
 ## Creating the ParadisoSolver
 
-A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` or a `MKLPardisoSolver()`.will be referred to as `ps`.
+A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` or a `MKLPardisoSolver()` will be referred to as `ps`.
 
 
 ### Setting the number of threads
@@ -55,15 +56,12 @@ Solving equations is done with the `solve` and `solve!` functions. They have the
 * `solve(ps, A, B)` solves `AX=B` and returns `X`
 * `solve!(ps, X, A, B)` solves `AX=B` and stores it in `X`
 
-If instead one wants to solve`A^T X = B`, the symbol `:T` should be passed as an extra last argument to the functions.
-
-**Note**: The transposed versions are **not** the conjugate transpose in cases where `A` is complex.
+The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
 
 Here is a contrived example of solving a system of real equations with two right hand sides:
 
 ```
 ps = PardisoSolver()
-set_mtype(ps, 11)
 
 A = sparse(rand(10, 10))
 B = rand(10, 2)
@@ -90,9 +88,15 @@ julia> X
 
 ## More advanced usage.
 
-This section discusses some more advanced usage of `Pardiso.jl`
+This section discusses some more advanced usage of `Pardiso.jl`. When using these
 
 For terminology in this section please refer to the [PARDISO 5.0 manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
+
+After using functionality in this section, calls should no longer be made to the `solve` functions but instead directly to the function
+```
+pardiso(ps, X, A, B)
+```
+This will ensure that the properties you set will not be overwritten.
 
 ### Setting the matrix type
 
@@ -157,11 +161,6 @@ set_dparm(ps, i, v) # Sets DPARM[i] = v
 
 To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The default values depend on what solver and matrix type is set.
 
-After setting `IPARM` and `DPARM` explicitly, calls should be made directly to the function
-```
-pardiso(ps, X, A, B)
-```
-which will not modify the `IPARM` and `DPARM` values.
 
 ### MNUM, MAXFCT, PERM
 
