@@ -7,7 +7,7 @@ catch
 end
 
 if PARDISO_LOADED
-    const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+    const libblas = Libdl.dlopen("/home/kristoffer/Downloads/OpenBLAS/libopenblas", Libdl.RTLD_GLOBAL)
     const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
     const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
 end
@@ -26,12 +26,12 @@ end
 const VALID_SOLVERS = [0, 1]
 
 
-const SOLVERS = Dict{Int, ASCIIString}(
+@compat const SOLVERS = Dict{Int, ASCIIString}(
 0 => "Direct",
 1 => "Iterative")
 
 
-const PHASES = Dict{Int, ASCIIString}(
+@compat const PHASES = Dict{Int, ASCIIString}(
  11  => "Analysis",
  12  => "Analysis, numerical factorization",
  13  => "Analysis, numerical factorization, solve, iterative refinement",
@@ -72,7 +72,7 @@ function PardisoSolver()
     if ("OMP_NUM_THREADS" in keys(ENV))
         iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
     else
-        iparm[3]= CPU_CORES
+        throw(ErrorException("OMP_NUM_THREADS not set"))
     end
 
     mnum = 1
@@ -200,20 +200,20 @@ end
 
 function check_error(ps::PardisoSolver, err::Vector{Int32})
     err = err[1]
-    err != -1  || throw(ErrorException("Input inconsistent."))
-    err != -2  || throw(ErrorException("Not enough memory."))
-    err != -3  || throw(ErrorException("Reordering problem."))
-    err != -4  || throw(ErrorException("Zero pivot, numerical fact. or iterative refinement problem."))
-    err != -5  || throw(ErrorException("Unclassified (internal) error."))
-    err != -6  || throw(ErrorException("Preordering failed (matrix types 11, 13 only)."))
-    err != -7  || throw(ErrorException("Diagonal matrix problem."))
-    err != -8  || throw(ErrorException("32-bit integer overflow problem."))
-    err != -10 || throw(ErrorException("No license file pardiso.lic found."))
-    err != -11 || throw(ErrorException("License is expired."))
-    err != -12 || throw(ErrorException("Wrong username or hostname."))
-    err != -100|| throw(ErrorException("Reached maximum number of Krylov-subspace iteration in iterative solver."))
-    err != -101|| throw(ErrorException("No sufficient convergence in Krylov-subspace iteration within 25 iterations."))
-    err != -102|| throw(ErrorException("Error in Krylov-subspace iteration."))
-    err != -103|| throw(ErrorException("Break-Down in Krylov-subspace iteration."))
+    err != -1  || throw(PardisoException("Input inconsistent."))
+    err != -2  || throw(PardisoException("Not enough memory."))
+    err != -3  || throw(PardisoException("Reordering problem."))
+    err != -4  || throw(PardisoPosDefException("Zero pivot, numerical fact. or iterative refinement problem."))
+    err != -5  || throw(PardisoException("Unclassified (internal) error."))
+    err != -6  || throw(PardisoException("Preordering failed (matrix types 11, 13 only)."))
+    err != -7  || throw(PardisoException("Diagonal matrix problem."))
+    err != -8  || throw(PardisoException("32-bit integer overflow problem."))
+    err != -10 || throw(PardisoException("No license file pardiso.lic found."))
+    err != -11 || throw(PardisoException("License is expired."))
+    err != -12 || throw(PardisoException("Wrong username or hostname."))
+    err != -100|| throw(PardisoException("Reached maximum number of Krylov-subspace iteration in iterative solver."))
+    err != -101|| throw(PardisoException("No sufficient convergence in Krylov-subspace iteration within 25 iterations."))
+    err != -102|| throw(PardisoException("Error in Krylov-subspace iteration."))
+    err != -103|| throw(PardisoException("Break-Down in Krylov-subspace iteration."))
     return
 end

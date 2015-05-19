@@ -1,5 +1,7 @@
 module Pardiso
 
+using Compat
+
 using Base.LinAlg
 using Base.SparseMatrix
 
@@ -19,8 +21,18 @@ const REAL_MTYPES = [1, 2, -2, 11]
 const COMPLEX_MTYPES = [3, 4, -4, 6, 13]
 const VALID_MSGLVLS = [0, 1]
 
+type PardisoException <: Exception
+    info::ASCIIString
+end
 
-const MTYPES = Dict{Int, ASCIIString}(
+type PardisoPosDefException <: Exception
+    info::ASCIIString
+end
+
+Base.showerror(io::IO, e::Union(PardisoException, PardisoPosDefException)) = print(io, e.info);
+
+
+@compat const MTYPES = Dict{Int, ASCIIString}(
   1 => "Real structurally symmetric",
   2 => "Real symmetric positive definite",
  -2 => "Real symmetric indefinite",
@@ -40,7 +52,7 @@ include("pardiso.jl")
 include("mkl_pardiso.jl")
 
 # Getters and setters
-function set_mtype(ps::PardisoSolver, v::Integer)
+function set_mtype(ps::AbstractPardisoSolver, v::Integer)
     v in VALID_MTYPES || throw(ArgumentError(string(
                                     "invalid matrix type, valid matrix ",
                                     "types are $VALID_MTYPES")))
@@ -95,13 +107,15 @@ end
 function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                                         T::Symbol=:N)
+
+
     pardisoinit(ps)
 
     if (T != :N && T != :T)
         throw(ArgumentError("only :T and :N are valid transpose symbols"))
     end
 
-    # We need to set the transpose flag in PARDISO when we DON*T want
+    # We need to set the transpose flag in PARDISO when we DON'T want
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
     if T == :N
@@ -110,9 +124,23 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
         set_transposed(ps, false)
     end
 
-
     original_phase = get_phase(ps)
-    pardiso(ps, X, A, B)
+
+    # If hermitian, try solve pos def, on error, solve with normal symm
+    # else solve with unsymm
+    if ishermitian(A)
+        eltype(A) == Float64 ? set_mtype(ps, 2) : set_mtype(ps, 4)
+        try
+            pardiso(ps, X, A, B)
+        catch e
+            isa(e, PardisoPosDefException) || rethrow(e)
+            eltype(A) == Float64 ? set_mtype(ps, -2) : set_mtype(ps, -4)
+            pardiso(ps, X, A, B)
+        end
+    else
+        eltype(A) == Float64 ? set_mtype(ps, 11) : set_mtype(ps, 13)
+        pardiso(ps, X, A, B)
+    end
 
     # Release memory, TODO: We are running the convert on IA and JA here
     # again which is unnecessary.
@@ -122,7 +150,7 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     return X
 end
 
-function pardiso{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
+function pardiso{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                          A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
 
     dim_check(X, A, B)
@@ -148,8 +176,6 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, X::VecOrMat{Tv},
     ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 end
 
-
-# Error checks
 function dim_check(X, A, B)
     size(X) == size(B) || throw(DimensionMismatch(string(
                                  "Solution has $(size(X)), ",

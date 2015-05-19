@@ -1,21 +1,28 @@
 try
-   Libdl.dlopen("libmkl_gf_lp64", Libdl.RTLD_GLOBAL)
-   Libdl.dlopen("libmkl_sequential", Libdl.RTLD_GLOBAL)
-   Libdl.dlopen("libmkl_intel_lp64", Libdl.RTLD_GLOBAL)
-   Libdl.dlopen("libmkl_intel_thread.so ", Libdl.RTLD_GLOBAL)
-
-   global const libmkl_core = Libdl.dlopen("libmkl_core", Libdl.RTLD_GLOBAL)
-   global const MKL_PARDISO_LOADED = true
+    const MKLROOT = ENV["MKLROOT"]
+    if Int === Int64
+        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
+        global const libmkl_seqential = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_sequential"), Libdl.RTLD_GLOBAL)
+        global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
+    else
+        # Untested!!
+        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
+        global const libmkl_seqential = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_sequential"), Libdl.RTLD_GLOBAL)
+        global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_core"), Libdl.RTLD_GLOBAL)
+    end
+    global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
+    global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
+    global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
+    global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
+    global const MKL_PARDISO_LOADED = true
 catch
-  global const MKL_PARDISO_LOADED = false
+    global const MKL_PARDISO_LOADED = false
 end
 
-if MKL_PARDISO_LOADED
-    global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
-    global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
-end
+const MKL_DOMAIN_PARDISO = Int32(4)
 
-const MKL_PHASES = Dict{Int, ASCIIString}(
+
+@compat const MKL_PHASES = Dict{Int, ASCIIString}(
  11 => "Analysis",
  12 => "Analysis, numerical factorization",
  13 => "Analysis, numerical factorization, solve, iterative refinement",
@@ -44,7 +51,7 @@ end
 
 function MKLPardisoSolver()
     if !MKL_PARDISO_LOADED
-        error("mkl library was not be loaded")
+        error("mkl library was not loaded")
     end
 
     pt = zeros(Int, 64)
@@ -66,6 +73,8 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
                                   "\tMatrix type: $(MTYPES[get_mtype(ps)])\n",
                                   "\tPhase: $(PHASES[get_phase(ps)])\n"))
 
+set_nprocs(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32},Ptr{Int32}), &Int32(n), &MKL_DOMAIN_PARDISO)
+get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MKL_DOMAIN_PARDISO)
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
@@ -73,10 +82,11 @@ phases(ps::MKLPardisoSolver) = MKL_PHASES
 set_transposed(ps::MKLPardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 2) : set_iparm(ps, 12, 0)
 
 @inline function ccall_pardisoinit(ps::MKLPardisoSolver)
+    ERR = Int32[1]
     ccall(mkl_init, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
           ps.pt, &ps.mtype, ps.iparm)
-    check_error(ERR)
+    check_error(ps, ERR)
 end
 
 
@@ -86,7 +96,7 @@ end
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
-           Ptr{Int32}, Ptr{Float64}),
+           Ptr{Int32}),
           ps.pt, &ps.maxfct, &ps.mnum, &ps.mtype, &ps.phase,
           &N, AA, IA, JA, ps.perm,
           &NRHS, ps.iparm, &ps.msglvl, B, X,
@@ -96,18 +106,19 @@ end
 
 function check_error(ps::MKLPardisoSolver, err::Vector{Int32})
     err = err[1]
-    err != -1  || throw(ErrorException("Input inconsistent."))
-    err != -2  || throw(ErrorException("Not enough memory."))
-    err != -3  || throw(ErrorException("Reordering problem."))
-    err != -4  || throw(ErrorException("Zero pivot, numerical fact. or iterative refinement problem."))
-    err != -5  || throw(ErrorException("Unclassified (internal) error."))
-    err != -6  || throw(ErrorException("Preordering failed (matrix types 11, 13 only)."))
-    err != -7  || throw(ErrorException("Diagonal matrix is singular"))
-    err != -8  || throw(ErrorException("32-bit integer overflow problem."))
-    err != -9  || throw(ErrorException("Not enough memory for OOC."))
-    err != -10 || throw(ErrorException("Error opening OOC files."))
-    err != -11 || throw(ErrorException("Read/write error with OOC files."))
-    err != -12 || throw(ErrorException("pardiso_64 called from 32-bit library"))
+    err != -1  || throw(PardisoException("Input inconsistent."))
+    err != -2  || throw(PardisoException("Not enough memory."))
+    err != -3  || throw(PardisoException("Reordering problem."))
+    err != -4  || throw(PardisoPosDefException("Zero pivot, numerical fact. or iterative refinement problem."))
+    err != -5  || throw(PardisoException("Unclassified (internal) error."))
+    err != -6  || throw(PardisoException("Preordering failed (matrix types 11, 13 only)."))
+    err != -7  || throw(PardisoException("Diagonal matrix is singular"))
+    err != -8  || throw(PardisoException("32-bit integer overflow problem."))
+    err != -9  || throw(PardisoException("Not enough memory for OOC."))
+    err != -10 || throw(PardisoException("Error opening OOC files."))
+    err != -11 || throw(PardisoException("Read/write error with OOC files."))
+    err != -12 || throw(PardisoException("pardiso_64 called from 32-bit library"))
     return
 end
+
 
