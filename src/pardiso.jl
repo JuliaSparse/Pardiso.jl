@@ -8,6 +8,7 @@ end
 
 if PARDISO_LOADED
     const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+    const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
     const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
     const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
 end
@@ -94,8 +95,6 @@ show(io::IO, ps::PardisoSolver) = print(io, string("$PardisoSolver:\n",
 valid_phases(ps::PardisoSolver) = keys(PHASES)
 phases(ps::PardisoSolver) = PHASES
 
-set_transposed(ps::PardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 1) : set_iparm(ps, 12, 0)
-
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
 set_dparm(ps::PardisoSolver, i::Integer, v::FloatingPoint) = ps.dparm[i] = v
@@ -130,8 +129,6 @@ end
           ERR, ps.dparm)
     check_error(ps, ERR)
 end
-
-
 
 # Different checks
 function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},

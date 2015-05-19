@@ -1,5 +1,6 @@
 using Pardiso
 using Base.Test
+using Base.SparseMatrix
 
 srand(1234)
 ENV["OMP_NUM_THREADS"] = 1
@@ -25,31 +26,37 @@ for pardiso_type in psolvers
             set_mtype(ps, 13)
         end
 
-        A = sparse(rand(data_type, 10,10))
+        A1 = sparse(rand(data_type, 10,10))
         B = rand(data_type, 10, 2)
         X = similar(B)
 
-        if pardiso_type == PardisoSolver
-            printstats(ps, A, B)
-            checkmatrix(ps, A)
-            checkvec(ps, B)
+        # Test unsymmetric, symmetric indef and symmetric posdef
+        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, A1 + A1.']
+
+            solve!(ps, X, A, B)
+            @test_approx_eq X A\B
+            fill!(X, 0.0)
+
+            X = solve(ps, A, B)
+            @test_approx_eq X A\B
+            fill!(X, 0.0)
+
+            solve!(ps, X, A, B, :C)
+            @test_approx_eq X A'\B
+            fill!(X, 0.0)
+
+            X = solve(ps, A, B, :C)
+            @test_approx_eq X A'\B
+            fill!(X, 0.0)
+
+            solve!(ps, X, A, B, :T)
+            @test_approx_eq X A.'\B
+            fill!(X, 0.0)
+
+            X = solve(ps, A, B, :T)
+            @test_approx_eq X A.'\B
+            fill!(X, 0.0)
         end
-
-        solve!(ps, X, A, B)
-        @test_approx_eq X A\B
-        fill!(X, 0.0)
-
-        X = solve(ps, A, B)
-        @test_approx_eq X A\B
-        fill!(X, 0.0)
-
-        solve!(ps, X, A, B, :T)
-        @test_approx_eq X A.'\B
-        fill!(X, 0.0)
-
-        X = solve(ps, A, B, :T)
-        @test_approx_eq X A.'\B
-        fill!(X, 0.0)
     end
 end
 end
@@ -63,6 +70,13 @@ for pardiso_type in psolvers
     A = sparse(rand(10,10))
     B = rand(10, 2)
     X = rand(10, 2)
+
+    if pardiso_type == PardisoSolver
+        printstats(ps, A, B)
+        checkmatrix(ps, A)
+        checkvec(ps, B)
+    end
+
 
     set_mtype(ps, 13)
     @test_throws ErrorException pardiso(ps, X, A, B)

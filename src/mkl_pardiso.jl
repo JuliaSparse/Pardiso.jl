@@ -79,8 +79,6 @@ get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MK
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
-set_transposed(ps::MKLPardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 2) : set_iparm(ps, 12, 0)
-
 @inline function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Int32[1]
     ccall(mkl_init, Void,

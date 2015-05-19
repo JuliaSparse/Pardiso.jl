@@ -108,39 +108,63 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                                         T::Symbol=:N)
 
-
     pardisoinit(ps)
-
-    if (T != :N && T != :T)
-        throw(ArgumentError("only :T and :N are valid transpose symbols"))
-    end
 
     # We need to set the transpose flag in PARDISO when we DON'T want
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
     if T == :N
-        set_transposed(ps, true)
+        set_iparm(ps, 12, 1)
+    elseif T == :C || T == :T
+        set_iparm(ps, 12, 0)
     else
-        set_transposed(ps, false)
+        throw(ArgumentError("only :T, :N  and :C, are valid transpose symbols"))
     end
 
-    original_phase = get_phase(ps)
+    # If we want the matrix to only be transposed and not conjugated
+    # we have to conjugate it before sening it to Pardiso due to CSC CSR
+    # mismatch.
+    A1 = A
+    if T ==:T && eltype(A) == Complex128
+        A1 = conj(A)
+    end
 
-    # If hermitian, try solve pos def, on error, solve with normal symm
-    # else solve with unsymm
+    # This is the heuristics for choosing what matrix type to use
+    ##################################################################
+    # - If hermitian try to solve with symmetroc positive definite.
+    #   - On pos def exception, solve instead with symmetric indefinite.
+    # - If complex and symmetric, solve with symmetric complex solver
+    # - Else solve as unsymmetric.
+
+    # When sending the symmetric matrices to Pardiso, we need to be carefull
+    # with taking the lower or upper part and how that influence the conjugateness.
+
+    # Some timings need to be made here what the most efficient conversions are
     if ishermitian(A)
         eltype(A) == Float64 ? set_mtype(ps, 2) : set_mtype(ps, 4)
         try
-            pardiso(ps, X, A, B)
+            pardiso(ps, X, triu(A1).', B)
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)
             eltype(A) == Float64 ? set_mtype(ps, -2) : set_mtype(ps, -4)
-            pardiso(ps, X, A, B)
+            pardiso(ps, X, triu(A1).', B)
+        end
+    elseif eltype(A) == Complex128 && issym(A)
+         set_mtype(ps, 6)
+        if T == :N || T == :T
+             pardiso(ps, X, tril(A), B)
+        elseif T == :C
+          pardiso(ps, X, triu(A)', B)
         end
     else
         eltype(A) == Float64 ? set_mtype(ps, 11) : set_mtype(ps, 13)
-        pardiso(ps, X, A, B)
+        if T == :N || T == :T
+            pardiso(ps, X, A, B)
+        elseif T == :C
+          pardiso(ps, X, conj(A), B)
+        end
     end
+    original_phase = get_phase(ps)
 
     # Release memory, TODO: We are running the convert on IA and JA here
     # again which is unnecessary.
