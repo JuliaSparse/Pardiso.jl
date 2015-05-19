@@ -29,7 +29,7 @@ This section will explain how solve equations using `Pardiso.jl` with the defaul
 
 ## Creating the ParadisoSolver
 
-A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` or a `MKLPardisoSolver()`.will be referred to as `ps`.
+A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` or a `MKLPardisoSolver()` will be referred to as `ps`.
 
 
 ### Setting the number of threads
