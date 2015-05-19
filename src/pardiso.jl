@@ -7,7 +7,7 @@ catch
 end
 
 if PARDISO_LOADED
-    const libblas = Libdl.dlopen("/home/kristoffer/Downloads/OpenBLAS/libopenblas", Libdl.RTLD_GLOBAL)
+    const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
     const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
     const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
 end
