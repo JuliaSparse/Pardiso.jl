@@ -33,7 +33,7 @@ for pardiso_type in psolvers
         B = rand(data_type, 10, 2)
         X = similar(B)
 
-        # Test unsymmetric, symmetric indef and symmetric posdef
+        # Test unsymmetric, herm indef, herm posdef and symmetric
         for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, A1 + A1.']
 
             solve!(ps, X, A, B)
