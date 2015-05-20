@@ -58,8 +58,6 @@ for pardiso_type in psolvers
 end
 end
 
-
-print("HERE??")
 # Test some errors
 let
 for pardiso_type in psolvers

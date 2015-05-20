@@ -128,10 +128,6 @@ function solve!{Ti, Tv}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
     # If we want the matrix to only be transposed and not conjugated
     # we have to conjugate it before sening it to Pardiso due to CSC CSR
     # mismatch.
-    A1 = A
-    if T ==:T && eltype(A) == Complex128
-        A1 = conj(A)
-    end
 
     # This is the heuristics for choosing what matrix type to use
     ##################################################################
@@ -139,16 +135,11 @@ function solve!{Ti, Tv}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
     #   - On pos def exception, solve instead with symmetric indefinite.
     # - If complex and symmetric, solve with symmetric complex solver
     # - Else solve as unsymmetric.
-
-    # When sending the symmetric matrices to Pardiso, we need to be carefull
-    # with taking the lower or upper part and how that influence the conjugateness.
-
-    # Some timings need to be made here what the most efficient conversions are
      if ishermitian(A)
         eltype(A) == Float64 ? set_mtype(ps, 2) : set_mtype(ps, 4)
         try
             if typeof(ps) == PardisoSolver
-                pardiso(ps, X, triu(A1).', B)
+                   pardiso(ps, X, get_matrix(ps, A, T), B)
             else
                 # MKLPardiso apparently doesn't throw anything
                 # if you pass it a non pos def matrix so I guess we never
@@ -158,30 +149,14 @@ function solve!{Ti, Tv}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)
             eltype(A) == Float64 ? set_mtype(ps, -2) : set_mtype(ps, -4)
-            if typeof(ps) == PardisoSolver
-                pardiso(ps, X, conj(tril(A1)), B)
-            else
-                if T == :N
-                    pardiso(ps, X, tril(A1), B)
-                elseif T == :C || T == :T
-                    pardiso(ps, X, conj(tril(A1)), B)
-                end
-            end
+            pardiso(ps, X, get_matrix(ps, A, T), B)
         end
-    elseif eltype(A) == Complex128 && issym(A)
+    elseif issym(A)
         set_mtype(ps, 6)
-        if T == :N || T == :T
-            pardiso(ps, X, tril(A), B)
-        elseif T == :C
-            pardiso(ps, X, conj(tril(A)), B)
-        end
+        pardiso(ps, X, get_matrix(ps, A, T), B)
     else
         eltype(A) == Float64 ? set_mtype(ps, 11) : set_mtype(ps, 13)
-        if T == :N || T == :T
-            pardiso(ps, X, A, B)
-        elseif T == :C
-            pardiso(ps, X, conj(A), B)
-        end
+        pardiso(ps, X, get_matrix(ps, A, T), B)
     end
     original_phase = get_phase(ps)
 

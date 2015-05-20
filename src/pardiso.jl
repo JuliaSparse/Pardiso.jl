@@ -108,6 +108,26 @@ function set_solver(ps::PardisoSolver, v::Integer)
 end
 get_solver(ps::PardisoSolver) = ps.solver
 
+
+function get_matrix(ps::PardisoSolver, A, T)
+    mtype = get_mtype(ps)
+
+    if mtype in [2, 4, -2, -4]
+        T == :T && return tril(A)
+        return conj(tril(A))
+    end
+
+     if mtype in [11, 13]
+        T == :C && return conj(A)
+        return A
+    end
+
+    if mtype == 6
+        T == :C && return conj(tril(A))
+        return tril(A)
+    end
+end
+
 @inline function ccall_pardisoinit(ps::PardisoSolver)
    ERR = Int32[0]
     ccall(init, Void,

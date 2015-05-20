@@ -79,6 +79,25 @@ get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MK
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
+function get_matrix(ps::MKLPardisoSolver, A, T)
+    mtype = get_mtype(ps)
+
+    if mtype in [2, 4, -2, -4]
+        T == :C && return conj(tril(A))
+        return tril(A)
+    end
+
+    if mtype in [11, 13]
+        T == :C && return conj(A)
+        return A
+    end
+
+    if mtype == 6
+        T == :C && return conj(tril(A))
+        return tril(A)
+    end
+end
+
 @inline function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Int32[0]
     ccall(mkl_init, Void,
