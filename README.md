@@ -4,7 +4,7 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Installation
 
-### For MKL PARDISO
+### MKL PARDISO
 
 To use the MKL PARDISO the `MKLROOT` environment variable should be set. How to do this is shown [here](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started).
 
@@ -34,7 +34,7 @@ A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5
 
 ### Setting the number of threads
 
-The number of threads to use when solving is set in different ways for MKL PARDISO and PARDISO 5.0.
+The number of threads to used are set in different ways for MKL PARDISO and PARDISO 5.0.
 
 #### MKL PARDISO
 
@@ -45,7 +45,7 @@ get_nprocs(ps) # Gets the number of threads
 
 #### PARDISO 5.0
 
-The number of threads to use when solving is set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown.
+The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown.
 
 The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
