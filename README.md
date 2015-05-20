@@ -25,7 +25,7 @@ For PARDISO 5.0 the following libraries should be loadable from within Julia wit
 
 ## Basic Usage
 
-This section will explain how solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
+This section will explain how TO solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
 
 ## Creating the ParadisoSolver
 
@@ -88,7 +88,7 @@ julia> X
 
 ## More advanced usage.
 
-This section discusses some more advanced usage of `Pardiso.jl`. When using these
+This section discusses some more advanced usage of `Pardiso.jl`.
 
 For terminology in this section please refer to the [PARDISO 5.0 manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
 
@@ -177,15 +177,17 @@ get_perm(ps)
 set_perm(ps, perm) # Perm is a Vector{Integer}
 ```
 
-### PARDISO checkers (5.0 only)
+### Matrix and vector checkers
 
-PARDISO comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
+PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
 
 ```julia
 printstats(ps, A, B)
 checkmatrix(ps, A, B)
 checkvec(B)
 ```
+
+In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `pardiso`.
 
 ### Potential "gotchas"
 
