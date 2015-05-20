@@ -20,7 +20,7 @@ For PARDISO 5.0 the following libraries should be loadable from within Julia wit
 
 **Note** The BLAS library should run in a single thread for optimal performance.
 
-`Pardiso.jl`  has currently only been tested to work on Linux.
+`Pardiso.jl` currently only works on Linux.
 
 
 ## Basic Usage
