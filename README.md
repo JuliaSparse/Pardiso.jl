@@ -18,7 +18,7 @@ For PARDISO 5.0 the following libraries should be loadable from within Julia wit
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
 * `libgomp.so` - Library for OpenMP
 
-**Note** The BLAS library should run in a single thread.
+**Note** The BLAS library should run in a single thread for optimal performance.
 
 `Pardiso.jl`  has currently only been tested to work on Linux.
 
