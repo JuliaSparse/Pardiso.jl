@@ -97,14 +97,14 @@ function pardisoinit(ps::AbstractPardisoSolver)
 end
 
 
-function solve{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+function solve{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                                        B::VecOrMat{Tv}, T::Symbol=:N)
   X = copy(B)
   solve!(ps, X, A, B, T)
   return X
 end
 
-function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
+function solve!{Ti, Tv}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                                         T::Symbol=:N)
 
@@ -114,7 +114,11 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
     if T == :N
-        set_iparm(ps, 12, 1)
+        if ps == PardisoSolver
+            set_iparm(ps, 12, 1)
+        else
+            set_iparm(ps, 12, 2)
+        end
     elseif T == :C || T == :T
         set_iparm(ps, 12, 0)
     else
@@ -140,28 +144,43 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     # with taking the lower or upper part and how that influence the conjugateness.
 
     # Some timings need to be made here what the most efficient conversions are
-    if ishermitian(A)
+     if ishermitian(A)
         eltype(A) == Float64 ? set_mtype(ps, 2) : set_mtype(ps, 4)
         try
-            pardiso(ps, X, triu(A1).', B)
+            if ps == PardisoSolver
+                pardiso(ps, X, triu(A1).', B)
+            else
+                # MKLPardiso apparently doesn't throw anything
+                # if you pass it a non pos def so I guess we never
+                # use it automatically...
+                throw(PardisoPosDefException(""))
+            end
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)
             eltype(A) == Float64 ? set_mtype(ps, -2) : set_mtype(ps, -4)
-            pardiso(ps, X, triu(A1).', B)
+            if ps == PardisoSolver
+                pardiso(ps, X, triu(A1).', B)
+            else
+                if T == :N
+                    pardiso(ps, X, tril(A1), B)
+                elseif T == :C || T == :T
+                    pardiso(ps, X, triu(A1).', B)
+                end
+            end
         end
     elseif eltype(A) == Complex128 && issym(A)
-         set_mtype(ps, 6)
+        set_mtype(ps, 6)
         if T == :N || T == :T
-             pardiso(ps, X, tril(A), B)
+            pardiso(ps, X, tril(A), B)
         elseif T == :C
-          pardiso(ps, X, triu(A)', B)
+            pardiso(ps, X, triu(A)', B)
         end
     else
         eltype(A) == Float64 ? set_mtype(ps, 11) : set_mtype(ps, 13)
         if T == :N || T == :T
             pardiso(ps, X, A, B)
         elseif T == :C
-          pardiso(ps, X, conj(A), B)
+            pardiso(ps, X, conj(A), B)
         end
     end
     original_phase = get_phase(ps)
@@ -189,13 +208,13 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{
                                     "has a complex matrix type set")))
     end
 
-    N = Int32(size(A, 2))
+    N = @compat Int32(size(A, 2))
 
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
 
-    NRHS = Int32(size(B, 2))
+    NRHS = @compat Int32(size(B, 2))
 
     ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 end

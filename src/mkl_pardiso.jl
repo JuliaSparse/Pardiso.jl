@@ -1,14 +1,14 @@
 try
     const MKLROOT = ENV["MKLROOT"]
     if Int === Int64
-        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
         global const libmkl_seqential = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_sequential"), Libdl.RTLD_GLOBAL)
         global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
+        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
     else
         # Untested!!
-        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
         global const libmkl_seqential = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_sequential"), Libdl.RTLD_GLOBAL)
         global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_core"), Libdl.RTLD_GLOBAL)
+        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
     end
     global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
     global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
@@ -19,7 +19,7 @@ catch
     global const MKL_PARDISO_LOADED = false
 end
 
-const MKL_DOMAIN_PARDISO = Int32(4)
+const MKL_DOMAIN_PARDISO = @compat Int32(4)
 
 
 @compat const MKL_PHASES = Dict{Int, ASCIIString}(
@@ -80,7 +80,7 @@ valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
 @inline function ccall_pardisoinit(ps::MKLPardisoSolver)
-    ERR = Int32[1]
+    ERR = Int32[0]
     ccall(mkl_init, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
           ps.pt, &ps.mtype, ps.iparm)

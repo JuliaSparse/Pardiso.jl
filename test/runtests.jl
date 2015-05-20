@@ -6,8 +6,9 @@ srand(1234)
 ENV["OMP_NUM_THREADS"] = 1
 
 psolvers = DataType[]
+
+#Pardiso.PARDISO_LOADED && push!(psolvers, PardisoSolver)
 Pardiso.MKL_PARDISO_LOADED && push!(psolvers, MKLPardisoSolver)
-Pardiso.PARDISO_LOADED && push!(psolvers, PardisoSolver)
 
 if length(psolvers) == 0
     error("No Pardiso library managed to load. Unable to run tests.")
@@ -35,27 +36,21 @@ for pardiso_type in psolvers
 
             solve!(ps, X, A, B)
             @test_approx_eq X A\B
-            fill!(X, 0.0)
 
             X = solve(ps, A, B)
             @test_approx_eq X A\B
-            fill!(X, 0.0)
 
             solve!(ps, X, A, B, :C)
             @test_approx_eq X A'\B
-            fill!(X, 0.0)
 
             X = solve(ps, A, B, :C)
             @test_approx_eq X A'\B
-            fill!(X, 0.0)
 
             solve!(ps, X, A, B, :T)
             @test_approx_eq X A.'\B
-            fill!(X, 0.0)
 
             X = solve(ps, A, B, :T)
             @test_approx_eq X A.'\B
-            fill!(X, 0.0)
         end
     end
 end
