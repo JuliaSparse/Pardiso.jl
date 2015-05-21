@@ -140,7 +140,7 @@ Depending on the phase calls to `solve` (and `pardiso` which is mentioned later)
 | 33    | Solve, iterative refinement                                    |
 |331    | MKL only, like phase=33, but only forward substitution         |
 |332    | MKL only, like phase=33, but only diagonal substitution (if available) |
-|333    | MKL only,like phase=33, but only backward substitution
+|333    | MKL only ,like phase=33, but only backward substitution
 | 0     | Release internal memory for L and U matrix number MNUM         |
 | -1    | Release all internal memory for all matrices                   |
 
