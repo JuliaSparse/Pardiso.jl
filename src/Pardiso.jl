@@ -104,7 +104,7 @@ function solve{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, A::SparseMatri
   return X
 end
 
-function solve!{Ti, Tv}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
+function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                                         T::Symbol=:N)
 
@@ -205,4 +205,3 @@ end
 
 
 end # module
-

@@ -108,7 +108,8 @@ end
 end
 
 
-@inline function ccall_pardiso(ps::MKLPardisoSolver, N, AA, IA, JA, NRHS, B, X)
+@inline function ccall_pardiso{Tv}(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
+                                   NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv})
     ERR = Int32[0]
     ccall(mkl_pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},

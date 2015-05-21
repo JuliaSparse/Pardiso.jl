@@ -132,7 +132,8 @@ end
 end
 
 
-@inline function ccall_pardiso(ps::PardisoSolver, N, AA, IA, JA, NRHS, B, X)
+@inline function ccall_pardiso{Tv}(ps::PardisoSolver, N, AA::Vector{Tv},
+                                   IA, JA, NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv})
     ERR = Int32[0]
     ccall(pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
@@ -151,11 +152,11 @@ end
 # Different checks
 function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                                             B::VecOrMat{Tv})
-    N = Int32(size(A, 2))
+    N = @compat Int32(size(A, 2))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
-    NRHS = Int32(size(B, 2))
+    NRHS = @compat Int32(size(B, 2))
     ERR = Int32[0]
     if Tv <: Complex
         f = pardiso_printstats_z
@@ -173,7 +174,7 @@ function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCS
 end
 
 function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
-    N = Int32(size(A, 1))
+    N = @compat Int32(size(A, 1))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
@@ -196,8 +197,8 @@ function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixC
 end
 
 function checkvec{Tv <: PardisoTypes}(ps, B::VecOrMat{Tv})
-    N = Int32(size(B, 1))
-    NRHS = Int32(size(B, 2))
+    N = @compat Int32(size(B, 1))
+    NRHS = @compat Int32(size(B, 2))
     ERR = Int32[0]
 
     if Tv <: Complex
