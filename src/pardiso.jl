@@ -1,31 +1,25 @@
 # Pardiso functions
 try
     global const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
+    global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+    global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
+    global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+    global const init = Libdl.dlsym(libpardiso, "pardisoinit")
+    global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
+    global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
+    global const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
+    global const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
+    global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
+    global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
+    global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
     global const PARDISO_LOADED = true
-catch
+catch e
+    println("Info: Pardiso did not load because: $e")
     global const PARDISO_LOADED = false
 end
 
-if PARDISO_LOADED
-    const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-    const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
-    const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-    const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-end
-
-if PARDISO_LOADED
-    const init = Libdl.dlsym(libpardiso, "pardisoinit")
-    const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
-    const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
-    const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
-    const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
-    const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
-    const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
-    const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
-end
-
 const VALID_SOLVERS = [0, 1]
-
 
 @compat const SOLVERS = Dict{Int, ASCIIString}(
 0 => "Direct",

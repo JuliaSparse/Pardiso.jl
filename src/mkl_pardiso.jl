@@ -15,7 +15,8 @@ try
     global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
     global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
     global const MKL_PARDISO_LOADED = true
-catch
+catch e
+    println("Info: MKL Pardiso did not load because: $e")
     global const MKL_PARDISO_LOADED = false
 end
 
