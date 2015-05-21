@@ -51,6 +51,10 @@ abstract AbstractPardisoSolver
 include("pardiso.jl")
 include("mkl_pardiso.jl")
 
+if !(MKL_PARDISO_LOADED || PARDISO_LOADED)
+    warn("No Pardiso library managed to load.")
+end
+
 # Getters and setters
 function set_mtype(ps::AbstractPardisoSolver, v::Integer)
     v in VALID_MTYPES || throw(ArgumentError(string(
