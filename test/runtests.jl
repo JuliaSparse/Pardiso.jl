@@ -15,7 +15,7 @@ if length(psolvers) == 0
     error("No Pardiso library managed to load. Unable to run tests.")
 end
 
-# Test solver + checkers for real matrices
+# Test solver + for real and complex data
 let
 for pardiso_type in psolvers
     print(pardiso_type)
@@ -58,7 +58,7 @@ for pardiso_type in psolvers
 end
 end
 
-# Test some errors
+# Test some errors and matrix/vec checkers.
 let
 for pardiso_type in psolvers
 
@@ -68,7 +68,7 @@ for pardiso_type in psolvers
     B = rand(10, 2)
     X = rand(10, 2)
 
-    if pardiso_type == PardisoSolver
+    if typeof(pardiso_type) == PardisoSolver
         printstats(ps, A, B)
         checkmatrix(ps, A)
         checkvec(ps, B)
@@ -92,21 +92,24 @@ end
 
 let
 for pardiso_type in psolvers
-    ps = PardisoSolver()
+    ps = pardiso_type()
     set_iparm(ps, 1, 0)
     pardisoinit(ps)
     @test get_iparm(ps, 1) == 1
 
-    @test_throws ArgumentError set_solver(ps, 2)
     @test_throws ArgumentError set_phase(ps, 5)
     @test_throws ArgumentError set_msglvl(ps, 2)
     @test_throws ArgumentError set_mtype(ps, 15)
 
-    set_solver(ps, 1)
-    @test get_solver(ps) == 1
+    if typeof(pardiso_type) == PardisoSolver
+        @test_throws ArgumentError set_solver(ps, 2)
 
-    set_dparm(ps, 5, 13.37)
-    @test get_dparm(ps, 5) == 13.37
+        set_dparm(ps, 5, 13.37)
+        @test get_dparm(ps, 5) == 13.37
+
+        set_solver(ps, 1)
+        @test get_solver(ps) == 1
+    end
 
     set_iparm(ps, 13, 100)
     @test get_iparm(ps, 13) == 100
