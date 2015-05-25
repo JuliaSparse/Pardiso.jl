@@ -10,6 +10,8 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 To use the MKL PARDISO the `MKLROOT` environment variable should be set. How to do this is shown [here](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started).
 
+The OpenMP library `libgomp.so` should also be available.
+
 ### PARDISO 5.0
 
 For PARDISO 5.0 the following libraries should be loadable from within Julia with `dlopen`.

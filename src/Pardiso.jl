@@ -145,10 +145,11 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
             if typeof(ps) == PardisoSolver
                    pardiso(ps, X, get_matrix(ps, A, T), B)
             else
-                # MKLPardiso apparently doesn't throw anything
-                # if you pass it a non pos def matrix so I guess we never
-                # use it automatically...
-                throw(PardisoPosDefException(""))
+                # Workaround for #3
+                if eltype(A) == Complex128
+                    throw(PardisoPosDefException(""))
+                end
+                pardiso(ps, X, get_matrix(ps, A, T), B)
             end
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)

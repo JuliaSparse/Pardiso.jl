@@ -1,15 +1,16 @@
 try
     const MKLROOT = ENV["MKLROOT"]
     if Int === Int64
-        global const libmkl_seqential = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_sequential"), Libdl.RTLD_GLOBAL)
         global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
+        global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
         global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
     else
         # Untested!!
-        global const libmkl_seqential = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_sequential"), Libdl.RTLD_GLOBAL)
         global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_core"), Libdl.RTLD_GLOBAL)
+        global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
         global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
     end
+    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
     global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
     global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
     global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
@@ -74,7 +75,7 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
                                   "\tMatrix type: $(MTYPES[get_mtype(ps)])\n",
                                   "\tPhase: $(PHASES[get_phase(ps)])\n"))
 
-set_nprocs(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32},Ptr{Int32}), &Int32(n), &MKL_DOMAIN_PARDISO)
+set_nprocs(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32},Ptr{Int32}), &(@compat Int32(n)), &MKL_DOMAIN_PARDISO)
 get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MKL_DOMAIN_PARDISO)
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
