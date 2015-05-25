@@ -4,6 +4,8 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Installation
 
+**Note**: `Pardiso.jl` currently only works on Linux.
+
 ### MKL PARDISO
 
 To use the MKL PARDISO the `MKLROOT` environment variable should be set. How to do this is shown [here](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started).
@@ -18,14 +20,11 @@ For PARDISO 5.0 the following libraries should be loadable from within Julia wit
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
 * `libgomp.so` - Library for OpenMP
 
-**Note** The BLAS library should run in a single thread for optimal performance.
-
-`Pardiso.jl` currently only works on Linux.
-
+**Note**: The BLAS library should run in a single thread for optimal performance.
 
 ## Basic Usage
 
-This section will explain how TO solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
+This section will explain how to solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
 
 ## Creating the ParadisoSolver
 
@@ -34,7 +33,7 @@ A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5
 
 ### Setting the number of threads
 
-The number of threads to used are set in different ways for MKL PARDISO and PARDISO 5.0.
+The number of threads to use are set in different ways for MKL PARDISO and PARDISO 5.0.
 
 #### MKL PARDISO
 
@@ -45,7 +44,7 @@ get_nprocs(ps) # Gets the number of threads
 
 #### PARDISO 5.0
 
-The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown.
+The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown.
 
 The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
