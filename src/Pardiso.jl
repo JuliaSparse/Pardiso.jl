@@ -8,7 +8,7 @@ using Base.SparseMatrix
 import Base.show
 
 export PardisoSolver, MKLPardisoSolver
-export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl
+export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl, set_nprocs
 export get_iparm, get_iparms, get_dparm, get_dparms
 export get_mtype, get_solver, get_phase, get_msglvl, get_nprocs
 export set_maxfct, set_perm, set_mnum
