@@ -39,7 +39,7 @@ The number of threads to use are set in different ways for MKL PARDISO and PARDI
 
 #### MKL PARDISO
 
-```julia
+```jl
 set_nprocs(ps, i) # Sets the number of threads
 get_nprocs(ps) # Gets the number of threads
 ```
@@ -61,7 +61,7 @@ The symbols `:T` or `:C` can be added as an extra argument to solve the transpos
 
 Here is a contrived example of solving a system of real equations with two right hand sides:
 
-```
+```jl
 ps = PardisoSolver()
 
 A = sparse(rand(10, 10))
@@ -72,7 +72,7 @@ solve!(ps, X, A, B)
 
 which happened to give the result
 
-```julia
+```jl
 julia> X
 10x2 Array{Float64,2}:
  -0.487361  -0.715372
@@ -94,9 +94,11 @@ This section discusses some more advanced usage of `Pardiso.jl`.
 For terminology in this section please refer to the [PARDISO 5.0 manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
 
 After using functionality in this section, calls should no longer be made to the `solve` functions but instead directly to the function
-```
+
+```jl
 pardiso(ps, X, A, B)
 ```
+
 This will ensure that the properties you set will not be overwritten.
 
 ### Setting the matrix type
@@ -149,7 +151,7 @@ Depending on the phase calls to `solve` (and `pardiso` which is mentioned later)
 Advanced users likely want to explicitly set and retrieve the `DPARM` (5.0 only) and `IPARM` settings.
 This can be done with the getters and setters:
 
-```julia
+```jl
 get_iparm(ps, i) # Gets IPARM[i]
 get_iparms(ps) # Gets IPARM
 set_iparm(ps, i, v) # Sets IPARM[i] = v
@@ -167,7 +169,7 @@ To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The
 
 These are set and retrieved with the functions
 
-```julia
+```jl
 set_mnum(ps, i)
 get_mnum(ps)
 
@@ -182,7 +184,7 @@ set_perm(ps, perm) # Perm is a Vector{Integer}
 
 PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
 
-```julia
+```jl
 printstats(ps, A, B)
 checkmatrix(ps, A, B)
 checkvec(B)
