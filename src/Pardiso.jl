@@ -29,10 +29,10 @@ type PardisoPosDefException <: Exception
     info::ASCIIString
 end
 
-Base.showerror(io::IO, e::Union(PardisoException, PardisoPosDefException)) = print(io, e.info);
+Base.showerror(io::IO, e::Union{PardisoException, PardisoPosDefException}) = print(io, e.info);
 
 
-@compat const MTYPES = Dict{Int, ASCIIString}(
+const MTYPES = Dict{Int, ASCIIString}(
   1 => "Real structurally symmetric",
   2 => "Real symmetric positive definite",
  -2 => "Real symmetric indefinite",
@@ -44,11 +44,11 @@ Base.showerror(io::IO, e::Union(PardisoException, PardisoPosDefException)) = pri
  13 => "Complex nonsymmetric")
 
 
-typealias PardisoTypes Union(Float64, Complex128)
+typealias PardisoTypes Union{Float64, Complex128}
 
 abstract AbstractPardisoSolver
 
-include("pardiso.jl")
+include("project_pardiso.jl")
 include("mkl_pardiso.jl")
 
 if !(MKL_PARDISO_LOADED || PARDISO_LOADED)
@@ -188,13 +188,13 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{
                                     "has a complex matrix type set")))
     end
 
-    N = @compat Int32(size(A, 2))
+    N = Int32(size(A, 2))
 
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
 
-    NRHS = @compat Int32(size(B, 2))
+    NRHS = Int32(size(B, 2))
 
     ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 end
