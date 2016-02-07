@@ -21,12 +21,12 @@ end
 
 const VALID_SOLVERS = [0, 1]
 
-@compat const SOLVERS = Dict{Int, ASCIIString}(
+const SOLVERS = Dict{Int, ASCIIString}(
 0 => "Direct",
 1 => "Iterative")
 
 
-@compat const PHASES = Dict{Int, ASCIIString}(
+const PHASES = Dict{Int, ASCIIString}(
  11  => "Analysis",
  12  => "Analysis, numerical factorization",
  13  => "Analysis, numerical factorization, solve, iterative refinement",
@@ -93,7 +93,7 @@ set_transposed(ps::PardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 1) : set_ipar
 
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
-set_dparm(ps::PardisoSolver, i::Integer, v::FloatingPoint) = ps.dparm[i] = v
+set_dparm(ps::PardisoSolver, i::Integer, v::AbstractFloat) = ps.dparm[i] = v
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
 function set_solver(ps::PardisoSolver, v::Integer)
     v in keys(SOLVERS) || throw(ArgumentError(string("invalid solver, valid solvers are 0 for",
@@ -152,11 +152,11 @@ end
 # Different checks
 function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                                             B::VecOrMat{Tv})
-    N = @compat Int32(size(A, 2))
+    N = Int32(size(A, 2))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
-    NRHS = @compat Int32(size(B, 2))
+    NRHS = Int32(size(B, 2))
     ERR = Int32[0]
     if Tv <: Complex
         f = pardiso_printstats_z
@@ -174,7 +174,7 @@ function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCS
 end
 
 function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
-    N = @compat Int32(size(A, 1))
+    N = Int32(size(A, 1))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
@@ -197,8 +197,8 @@ function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixC
 end
 
 function checkvec{Tv <: PardisoTypes}(ps, B::VecOrMat{Tv})
-    N = @compat Int32(size(B, 1))
-    NRHS = @compat Int32(size(B, 2))
+    N = Int32(size(B, 1))
+    NRHS = Int32(size(B, 2))
     ERR = Int32[0]
 
     if Tv <: Complex
