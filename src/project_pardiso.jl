@@ -93,7 +93,7 @@ set_transposed(ps::PardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 1) : set_ipar
 
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
-set_dparm(ps::PardisoSolver, i::Integer, v::FloatingPoint) = ps.dparm[i] = v
+set_dparm(ps::PardisoSolver, i::Integer, v::AbstractFloat) = ps.dparm[i] = v
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
 function set_solver(ps::PardisoSolver, v::Integer)
     v in keys(SOLVERS) || throw(ArgumentError(string("invalid solver, valid solvers are 0 for",
