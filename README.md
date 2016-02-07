@@ -46,7 +46,7 @@ get_nprocs(ps) # Gets the number of threads
 
 #### PARDISO 5.0
 
-The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown.
+The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
 
 The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
