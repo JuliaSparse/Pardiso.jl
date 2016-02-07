@@ -177,7 +177,7 @@ set_maxfct(ps, i)
 get_maxfct(ps)
 
 get_perm(ps)
-set_perm(ps, perm) # Perm is a Vector{Integer}
+set_perm(ps, perm) # Perm is a Vector{Int}
 ```
 
 ### Matrix and vector checkers
