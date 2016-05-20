@@ -62,7 +62,7 @@ const SOLVER_STRING = Dict{Solver, String}(
     SOLVE_ITERATIVE_REFINE_ONLY_DIAG     = 332,
     SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD = 333,
     RELEASE_LU_MNUM                      = 0,
-    RELASE_ALL                           = -1
+    RELEASE_ALL                           = -1
 )
 
 const PHASE_STRING = Dict{Phase, String}(
@@ -74,7 +74,7 @@ const PHASE_STRING = Dict{Phase, String}(
     NUM_FACT_SOLVE_REFINE                => "Numerical factorization, solve, iterative refinement",
     SOLVE_ITERATIVE_REFINE               => "Solve, iterative refinement",
     RELEASE_LU_MNUM                      => "Release internal memory for L and U matrix number MNUM",
-    RELASE_ALL                           => "Release all internal memory for all matrices",
+    RELEASE_ALL                           => "Release all internal memory for all matrices",
     SOLVE_ITERATIVE_REFINE_ONLY_FORWARD  => "like phase=33, but only forward substitution",
     SOLVE_ITERATIVE_REFINE_ONLY_DIAG     => "like phase=33, but only diagonal substitution (if available)",
     SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD => "like phase=33, but only backward substitution",

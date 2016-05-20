@@ -1,25 +1,3 @@
-# Pardiso functions
-try
-    global const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
-    global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-    global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
-    global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-    global const init = Libdl.dlsym(libpardiso, "pardisoinit")
-    global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
-    global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
-    global const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
-    global const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
-    global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
-    global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
-    global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
-    global const PARDISO_LOADED = true
-catch e
-    println("Info: Pardiso did not load because: $e")
-    global const PARDISO_LOADED = false
-end
-
-
 type PardisoSolver <: AbstractPardisoSolver
     pt::Vector{Int}
     iparm::Vector{Int32}
@@ -46,11 +24,9 @@ function PardisoSolver()
     phase = ANALYSIS_NUM_FACT_SOLVE_REFINE
     msglvl = MESSAGE_LEVEL_OFF
     # Set numper of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
-    if ("OMP_NUM_THREADS" in keys(ENV))
+    if haskey(ENV, "OMP_NUM_THREADS")
         iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
     else
-        # TODO: Check if needed
-        #throw(ErrorException("OMP_NUM_THREADS not set"))
         iparm[3] = 1
     end
 

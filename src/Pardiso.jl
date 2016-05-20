@@ -42,13 +42,40 @@ typealias PardisoTypes Union{Float64, Complex128}
 
 abstract AbstractPardisoSolver
 
+function __init__()
+    if !(MKL_PARDISO_LIB_FOUND || PARDISO_LIB_FOUND)
+        warn("No Pardiso library managed to load.")
+    end
+
+    if PARDISO_LIB_FOUND
+        try
+            global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
+            global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+            global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
+            global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+            global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            global const init = Libdl.dlsym(libpardiso, "pardisoinit")
+            global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
+            global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
+            global const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
+            global const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
+            global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
+            global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
+            global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+            global const PARDISO_LOADED = true
+        catch e
+            println("Info: Pardiso did not load because: $e")
+            global const PARDISO_LOADED = false
+        end
+    else
+        global const PARDISO_LOADED = false
+    end
+end
+
+include("../deps/deps.jl")
 include("enums.jl")
 include("project_pardiso.jl")
 include("mkl_pardiso.jl")
-
-if !(MKL_PARDISO_LOADED || PARDISO_LOADED)
-    warn("No Pardiso library managed to load.")
-end
 
 # Getters and setters
 set_matrixtype!(ps::AbstractPardisoSolver, v::Int) = set_matrixtype!(ps, MatrixType[v][1])

@@ -9,10 +9,7 @@ end
 
 using Pardiso
 
-using Base.SparseMatrix
-
 srand(1234)
-
 
 psolvers = DataType[]
 
