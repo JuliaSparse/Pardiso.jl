@@ -1,5 +1,9 @@
 module Pardiso
 
+if !isfile("../deps/deps.jl")
+    error("""please run Pkg.build("Pardiso") before loading the package""")
+end
+
 using Compat
 
 import Compat.String
