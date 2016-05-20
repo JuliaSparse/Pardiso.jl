@@ -1,6 +1,6 @@
 # Pardiso functions
 try
-    global const libpardiso = Libdl.dlopen("/home/kristoffer/libpardiso", Libdl.RTLD_GLOBAL)
+    global const libpardiso = Libdl.dlopen("libpardiso", Libdl.RTLD_GLOBAL)
     global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
     global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
     global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
