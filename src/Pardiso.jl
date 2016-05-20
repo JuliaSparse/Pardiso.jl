@@ -2,52 +2,47 @@ module Pardiso
 
 using Compat
 
+import Compat.String
+
+if VERSION < v"0.5.0-dev+2915"
+    import Compat.issymmetric
+else
+    import Base.issymmetric
+end
+
 using Base.LinAlg
-using Base.SparseMatrix
 
 import Base.show
 
 export PardisoSolver, MKLPardisoSolver
-export set_iparm, set_dparm, set_mtype, set_solver, set_phase, set_msglvl, set_nprocs
+export set_iparm!, set_dparm!, set_matrixtype!, set_solver!, set_phase!, set_msglvl!, set_nprocs!
 export get_iparm, get_iparms, get_dparm, get_dparms
-export get_mtype, get_solver, get_phase, get_msglvl, get_nprocs
-export set_maxfct, set_perm, set_mnum
+export get_mtype, get_solver!, get_phase, get_msglvl, get_nprocs
+export set_maxfct!, set_perm!, set_mnum!
 export get_maxfct, get_perm, get_mnum
 export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 
-const VALID_MTYPES = [1, 2, -2, 3, 4, -4, 6, 11, 13]
-const REAL_MTYPES = [1, 2, -2, 11]
-const COMPLEX_MTYPES = [3, 4, -4, 6, 13]
-const VALID_MSGLVLS = [0, 1]
+include("CEnum.jl")
+
+using .CEnum
 
 type PardisoException <: Exception
-    info::ASCIIString
+    info::String
 end
 
 type PardisoPosDefException <: Exception
-    info::ASCIIString
+    info::String
 end
 
 Base.showerror(io::IO, e::Union{PardisoException, PardisoPosDefException}) = print(io, e.info);
-
-
-const MTYPES = Dict{Int, ASCIIString}(
-  1 => "Real structurally symmetric",
-  2 => "Real symmetric positive definite",
- -2 => "Real symmetric indefinite",
-  3 => "Complex structurally symmetric",
-  4 => "Complex Hermitian postive definite",
- -4 => "Complex Hermitian indefinite",
-  6 => "Complex symmetric",
- 11 => "Real nonsymmetric",
- 13 => "Complex nonsymmetric")
 
 
 typealias PardisoTypes Union{Float64, Complex128}
 
 abstract AbstractPardisoSolver
 
+include("enums.jl")
 include("project_pardiso.jl")
 include("mkl_pardiso.jl")
 
@@ -56,44 +51,38 @@ if !(MKL_PARDISO_LOADED || PARDISO_LOADED)
 end
 
 # Getters and setters
-function set_mtype(ps::AbstractPardisoSolver, v::Integer)
-    v in VALID_MTYPES || throw(ArgumentError(string(
-                                    "invalid matrix type, valid matrix ",
-                                    "types are $VALID_MTYPES")))
+set_matrixtype!(ps::AbstractPardisoSolver, v::Int) = set_matrixtype!(ps, MatrixType[v][1])
+function set_matrixtype!(ps::AbstractPardisoSolver, v::MatrixType)
     ps.mtype = v
 end
-get_mtype(ps::AbstractPardisoSolver) = ps.mtype
 
+get_mtype(ps::AbstractPardisoSolver) = ps.mtype
 get_iparm(ps::AbstractPardisoSolver, i::Integer) = ps.iparm[i]
 get_iparms(ps::AbstractPardisoSolver) = ps.iparm
-set_iparm(ps::AbstractPardisoSolver, i::Integer, v::Integer) = ps.iparm[i] = v
+set_iparm!(ps::AbstractPardisoSolver, i::Integer, v::Integer) = ps.iparm[i] = v
 
 get_mnum(ps::AbstractPardisoSolver) = ps.mnum
-set_mnum(ps::AbstractPardisoSolver, mnum::Integer) = ps.mnum = mnum
+set_mnum!(ps::AbstractPardisoSolver, mnum::Integer) = ps.mnum = mnum
 
 get_maxfct(ps::AbstractPardisoSolver) = ps.maxfct
-set_maxfct(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
+set_maxfct!(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
 
 get_perm(ps::AbstractPardisoSolver) = ps.perm
-set_perm{T <: Integer}(ps::PardisoTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
+set_perm!{T <: Integer}(ps::PardisoTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
 
 get_phase(ps::AbstractPardisoSolver) = ps.phase
 
-function set_phase(ps::AbstractPardisoSolver, v::Integer)
-    v in valid_phases(ps) || throw(ArgumentError(string(
-                                    "invalid phase, valid phases ",
-                                    "are \n $(valid_phases(ps))")))
+set_phase!(ps::AbstractPardisoSolver, v::Int) = set_phase!(ps, Phase[v][1])
+function set_phase!(ps::AbstractPardisoSolver, v::Phase)
     ps.phase = v
 end
 
 get_msglvl(ps::AbstractPardisoSolver) = ps.msglvl
-function set_msglvl(ps::AbstractPardisoSolver, v::Integer)
-    v in VALID_MSGLVLS || throw(ArgumentError(string(
-                                "invalid message level, valid message levels ",
-                                "are $VALID_MSGLVLS")))
+
+set_msglvl!(ps::AbstractPardisoSolver, v::Integer) = set_msglvl!(ps, MessageLevel[v][1])
+function set_msglvl!(ps::AbstractPardisoSolver, v::MessageLevel)
     ps.msglvl = v
 end
-
 
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
@@ -119,12 +108,12 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     # matrix to PARDISO which expects a CSR matrix.
     if T == :N
         if typeof(ps) == PardisoSolver
-            set_iparm(ps, 12, 1)
+            set_iparm!(ps, 12, 1)
         else
-            set_iparm(ps, 12, 2)
+            set_iparm!(ps, 12, 2)
         end
     elseif T == :C || T == :T
-        set_iparm(ps, 12, 0)
+        set_iparm!(ps, 12, 0)
     else
         throw(ArgumentError("only :T, :N  and :C, are valid transpose symbols"))
     end
@@ -140,7 +129,7 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     # - If complex and symmetric, solve with symmetric complex solver
     # - Else solve as unsymmetric.
      if ishermitian(A)
-        eltype(A) == Float64 ? set_mtype(ps, 2) : set_mtype(ps, 4)
+        eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
         try
             if typeof(ps) == PardisoSolver
                    pardiso(ps, X, get_matrix(ps, A, T), B)
@@ -153,23 +142,23 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
             end
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)
-            eltype(A) == Float64 ? set_mtype(ps, -2) : set_mtype(ps, -4)
+            eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF )
             pardiso(ps, X, get_matrix(ps, A, T), B)
         end
-    elseif issym(A)
-        set_mtype(ps, 6)
+    elseif issymmetric(A)
+        set_matrixtype!(ps, COMPLEX_SYM)
         pardiso(ps, X, get_matrix(ps, A, T), B)
     else
-        eltype(A) == Float64 ? set_mtype(ps, 11) : set_mtype(ps, 13)
+        eltype(A) == Float64 ? set_matrixtype!(ps, REAL_NONSYM) : set_matrixtype!(ps, COMPLEX_NONSYM)
         pardiso(ps, X, get_matrix(ps, A, T), B)
     end
     original_phase = get_phase(ps)
 
     # Release memory, TODO: We are running the convert on IA and JA here
     # again which is unnecessary.
-    set_phase(ps, -1)
+    set_phase!(ps, RELASE_ALL)
     pardiso(ps, X, A, B)
-    set_phase(ps, original_phase)
+    set_phase!(ps, original_phase)
     return X
 end
 
@@ -178,12 +167,12 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{
 
     dim_check(X, A, B)
 
-    if Tv <: Complex && get_mtype(ps) in REAL_MTYPES
+    if Tv <: Complex && isreal(get_mtype(ps))
         throw(ErrorException(string("input matrix is complex while PardisoSolver ",
                                     "has a real matrix type set")))
     end
 
-    if Tv <: Real && get_mtype(ps) in COMPLEX_MTYPES
+    if Tv <: Real && !isreal(get_mtype(ps))
         throw(ErrorException(string("input matrix is real while PardisoSolver ",
                                     "has a complex matrix type set")))
     end

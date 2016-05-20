@@ -101,51 +101,53 @@ pardiso(ps, X, A, B)
 
 This will ensure that the properties you set will not be overwritten.
 
+For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first.
+
 ### Setting the matrix type
 
-The matrix type can be explicitly set with `set_mtype(ps, key)` where the key has the following meaning:
+The matrix type can be explicitly set with `set_matrixtype(ps, key)` where the key has the following meaning:
 
-| key   | Matrix type                               |
-|----   |-----------------------------------------  |
-| 1     | real and structurally symmetric           |
-| 2     | real and symmetric positive definite      |
-| -2    | real and symmetric indefinite             |
-| 3     | complex and structurally symmetric        |
-| 4     | complex and Hermitian positive definite   |
-| -4    | complex and Hermitian indefinite          |
-| 6     | complex and symmetric                     |
-| 11    | real and nonsymmetric                     |
-| 13    | complex and nonsymmetric                  |
+| enum                 | Matrix type                               |
+|--------------------- |-----------------------------------------  |
+| REAL_SYM             | real and structurally symmetric           |
+| REAL_SYM_POSDEF      | real and symmetric positive definite      |
+| REAL_SYM_INDEF       | real and symmetric indefinite             |
+| COMPLEX_STRUCT_SYM   | complex and structurally symmetric        |
+| COMPLEX_HERM_POSDEF  | complex and Hermitian positive definite   |
+| COMPLEX_HERM_INDEF   | complex and Hermitian indefinite          |
+| COMPLEX_SYM          | complex and symmetric                     |
+| REAL_NONSYM          | real and nonsymmetric                     |
+| COMPLEX_NONSYM       | complex and nonsymmetric                  |
 
 The matrix type for a solver can be retrieved with `get_mtype(ps)`.
 
 ### Setting the solver (5.0 only)
 PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver(ps, key)` where the key has the following meaning:
 
-| key | Solver                           |
-|-----|----------------------------------|
-| 0   | sparse direct solver             |
-| 1   | multi-recursive iterative solver |
+| key                | Solver                           |
+|--------------------|----------------------------------|
+| DIRECT_SOLVER      | sparse direct solver             |
+| ITERATIVE_SOLVER   | multi-recursive iterative solver |
 
 
 ### Setting the phase
 
 Depending on the phase calls to `solve` (and `pardiso` which is mentioned later) does different things. The phase is set with `set_phase(ps, key)` where key has the meaning:
 
-| key   | Solver Execution Steps                                         |
-|-------|----------------------------------------------------------------|
-| 11    | Analysis                                                       |
-| 12    | Analysis, numerical factorization                              |
-| 13    | Analysis, numerical factorization, solve, iterative refinement |
-| 22    | Numerical factorization                                        |
-| -22   | Selected Inversion                                             |
-| 23    | Numerical factorization, solve, iterative refinement           |
-| 33    | Solve, iterative refinement                                    |
-|331    | MKL only, like phase=33, but only forward substitution         |
-|332    | MKL only, like phase=33, but only diagonal substitution (if available) |
-|333    | MKL only ,like phase=33, but only backward substitution
-| 0     | Release internal memory for L and U matrix number MNUM         |
-| -1    | Release all internal memory for all matrices                   |
+| key                                  | Solver Execution Steps                                         |
+|--------------------------------------|----------------------------------------------------------------|
+|ANALYSIS                              | Analysis                                                       |
+|ANALYSIS_NUM_FACT                     | Analysis, numerical factorization                              |
+|ANALYSIS_NUM_FACT_SOLVE_REFINE        | Analysis, numerical factorization, solve, iterative refinement |
+|NUM_FACT                              | Numerical factorization                                        |
+|SELECTED_INVERSION                    | Selected Inversion                                             |
+|NUM_FACT_SOLVE_REFINE                 | Numerical factorization, solve, iterative refinement           |
+|SOLVE_ITERATIVE_REFINE                | Solve, iterative refinement                                    |
+|SOLVE_ITERATIVE_REFINE_ONLY_FORWARD   | MKL only, like phase=33, but only forward substitution         |
+|SOLVE_ITERATIVE_REFINE_ONLY_DIAG      | MKL only, like phase=33, but only diagonal substitution (if available) |
+|SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD  | MKL only, like phase=33, but only backward substitution
+|RELEASE_LU_MNUM                       | Release internal memory for L and U matrix number MNUM         |
+|RELASE_ALL                            | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
 Advanced users likely want to explicitly set and retrieve the `DPARM` (5.0 only) and `IPARM` settings.
@@ -170,14 +172,14 @@ To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The
 These are set and retrieved with the functions
 
 ```jl
-set_mnum(ps, i)
+set_mnum!(ps, i)
 get_mnum(ps)
 
-set_maxfct(ps, i)
+set_maxfct!(ps, i)
 get_maxfct(ps)
 
 get_perm(ps)
-set_perm(ps, perm) # Perm is a Vector{Int}
+set_perm!(ps, perm) # Perm is a Vector{Int}
 ```
 
 ### Matrix and vector checkers
@@ -187,7 +189,7 @@ PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency
 ```jl
 printstats(ps, A, B)
 checkmatrix(ps, A, B)
-checkvec(B)
+checkvec(ps, B)
 ```
 
 In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `pardiso`.
