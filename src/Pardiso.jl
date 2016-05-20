@@ -156,7 +156,7 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
 
     # Release memory, TODO: We are running the convert on IA and JA here
     # again which is unnecessary.
-    set_phase!(ps, RELASE_ALL)
+    set_phase!(ps, RELEASE_ALL)
     pardiso(ps, X, A, B)
     set_phase!(ps, original_phase)
     return X

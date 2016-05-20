@@ -147,7 +147,7 @@ Depending on the phase calls to `solve` (and `pardiso` which is mentioned later)
 |SOLVE_ITERATIVE_REFINE_ONLY_DIAG      | MKL only, like phase=33, but only diagonal substitution (if available) |
 |SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD  | MKL only, like phase=33, but only backward substitution
 |RELEASE_LU_MNUM                       | Release internal memory for L and U matrix number MNUM         |
-|RELASE_ALL                            | Release all internal memory for all matrices                   |
+|RELEASE_ALL                            | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
 Advanced users likely want to explicitly set and retrieve the `DPARM` (5.0 only) and `IPARM` settings.
