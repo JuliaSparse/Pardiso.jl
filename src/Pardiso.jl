@@ -1,3 +1,5 @@
+__precompile__()
+
 module Pardiso
 
 if !isfile(joinpath(Pkg.dir(), "Pardiso", "deps", "deps.jl"))
