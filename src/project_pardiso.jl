@@ -90,7 +90,7 @@ end
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Float64}, Ptr{Int32}),
           ps.pt, &ps.mtype, &ps.solver, ps.iparm, ps.dparm, ERR)
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
 end
 
 
@@ -106,13 +106,13 @@ end
           &N, AA, IA, JA, ps.perm,
           &NRHS, ps.iparm, &ps.msglvl, B, X,
           ERR, ps.dparm)
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
 end
 
 
 
 # Different checks
-function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+function printstats{Ti, Tv <: PardisoNumTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                                             B::VecOrMat{Tv})
     N = Int32(size(A, 2))
     AA = A.nzval
@@ -131,11 +131,11 @@ function printstats{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCS
            Ptr{Int32}),
           &ps.mtype, &N, AA, IA, JA, &NRHS, B, ERR)
 
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
     return
 end
 
-function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
+function checkmatrix{Ti, Tv <: PardisoNumTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
     N = Int32(size(A, 1))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -154,11 +154,11 @@ function checkmatrix{Ti, Tv <: PardisoTypes}(ps::PardisoSolver, A::SparseMatrixC
           &ps.mtype, &N, AA, IA,
           JA, ERR)
 
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
     return
 end
 
-function checkvec{Tv <: PardisoTypes}(ps, B::VecOrMat{Tv})
+function checkvec{Tv <: PardisoNumTypes}(ps, B::VecOrMat{Tv})
     N = Int32(size(B, 1))
     NRHS = Int32(size(B, 2))
     ERR = Int32[0]

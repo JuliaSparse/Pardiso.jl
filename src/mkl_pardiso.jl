@@ -33,8 +33,8 @@ end
 
 
 show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
-                                  "\tMatrix type: $(MTYPES[get_mtype(ps)])\n",
-                                  "\tPhase: $(PHASES[get_phase(ps)])\n"))
+                                  "\tMatrix type: $(MATRIX_STRING[get_mtype(ps)])\n",
+                                  "\tPhase: $(PHASE_STRING[get_phase(ps)])"))
 
 set_nprocs!(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32},Ptr{Int32}), &(@compat Int32(n)), &MKL_DOMAIN_PARDISO)
 get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MKL_DOMAIN_PARDISO)
@@ -50,7 +50,7 @@ function get_matrix(ps::MKLPardisoSolver, A, T)
         return tril(A)
     end
 
-    if !symmetric(mtype)
+    if !issymmetric(mtype)
         T == :C && return conj(A)
         return A
     end
@@ -68,7 +68,7 @@ function ccall_pardisoinit(ps::MKLPardisoSolver)
     ccall(mkl_init, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
           ps.pt, &ps.mtype, ps.iparm)
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
 end
 
 

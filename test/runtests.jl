@@ -16,6 +16,8 @@ psolvers = DataType[]
 Pardiso.MKL_PARDISO_LOADED && push!(psolvers, MKLPardisoSolver)
 Pardiso.PARDISO_LOADED && push!(psolvers, PardisoSolver)
 
+println("Testing ", psolvers)
+
 if length(psolvers) == 0
     error("No Pardiso library managed to load. Unable to run tests.")
 end
@@ -23,7 +25,6 @@ end
 # Test solver + for real and complex data
 @testset "solving" begin
 for pardiso_type in psolvers
-    print(pardiso_type)
     for T in (Float64, Complex128)
         ps = pardiso_type()
         pardisoinit(ps)

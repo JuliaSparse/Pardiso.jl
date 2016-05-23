@@ -1,6 +1,6 @@
 module Pardiso
 
-if !isfile("../deps/deps.jl")
+if !isfile(joinpath(Pkg.dir(), "Pardiso", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
 end
 
@@ -27,6 +27,10 @@ export get_maxfct, get_perm, get_mnum
 export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 
+macro R_str(s)
+    s
+end
+
 include("CEnum.jl")
 
 using .CEnum
@@ -34,34 +38,26 @@ using .CEnum
 type PardisoException <: Exception
     info::String
 end
-
 type PardisoPosDefException <: Exception
     info::String
 end
-
 Base.showerror(io::IO, e::Union{PardisoException, PardisoPosDefException}) = print(io, e.info);
 
 
-typealias PardisoTypes Union{Float64, Complex128}
+typealias PardisoNumTypes Union{Float64, Complex128}
 
 abstract AbstractPardisoSolver
 
 function __init__()
     # Global variables used here are defined in the created deps.jl file in the deps folder
     if !(MKL_PARDISO_LIB_FOUND || PARDISO_LIB_FOUND)
-        warn("No Pardiso library managed to load.")
+        warn(string("""No Pardiso library found when Pkg.build("Pardiso") ran, this package will not currently be usable. """,
+                    """Please see the installation instructions and rerun Pkg.build("Pardiso")."""))
     end
-
-    global const PARDISO_LOADED = false
-    global const MKL_PARDISO_LOADED = false
-
+#
     if PARDISO_LIB_FOUND
-        try
+        try 
             global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
-            global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-            global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
-            global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-            global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
             global const init = Libdl.dlsym(libpardiso, "pardisoinit")
             global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
             global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
@@ -70,34 +66,43 @@ function __init__()
             global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
             global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+            
+            # Windows Pardiso lib comes with MKL prebaked but not on UNIX so we open them here
+            @unix_only begin
+                global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
+                global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+                global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
+                global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            end
             global const PARDISO_LOADED = true
         catch e
-            println("Info: Pardiso did not load because: $e")
+            warn("Pardiso did not manage to load, error thrown was: $e")
+            global const PARDISO_LOADED = false
         end
+    else
+        global const PARDISO_LOADED = true
     end
 
-    if MKL_PARDISO_LIB_FOUND
+   if MKL_PARDISO_LIB_FOUND
         try
-            global const MKLROOT = ENV["MKLROOT"]
-            if Int === Int64
-                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
-                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
-            else
-                # Untested!!
-                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_core"), Libdl.RTLD_GLOBAL)
-                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
-            end
-            global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-            global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
-            global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
-            global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
-            global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
+            @windows_only global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
+
+            @unix_only Libdl.dlopen(joinpath(MKLROOT, "lib", "intel64", "libmkl_core"), Libdl.RTLD_GLOBAL)
+
+            global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
+            global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
+            global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
+            global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
+       
             global const MKL_PARDISO_LOADED = true
+
         catch e
-            println("Info: MKL Pardiso did not load because: $e")
+            warn("MKL Pardiso did not manage to load, error thrown was: $e")
+            global const MKL_PARDISO_LOADED = false
         end
+    else
+        global const MKL_PARDISO_LOADED = false
     end
 end
 
@@ -124,7 +129,7 @@ get_maxfct(ps::AbstractPardisoSolver) = ps.maxfct
 set_maxfct!(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
 
 get_perm(ps::AbstractPardisoSolver) = ps.perm
-set_perm!{T <: Integer}(ps::PardisoTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
+set_perm!{T <: Integer}(ps::PardisoNumTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
 
 get_phase(ps::AbstractPardisoSolver) = ps.phase
 
@@ -146,14 +151,14 @@ function pardisoinit(ps::AbstractPardisoSolver)
 end
 
 
-function solve{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+function solve{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                                        B::VecOrMat{Tv}, T::Symbol=:N)
   X = copy(B)
   solve!(ps, X, A, B, T)
   return X
 end
 
-function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
+function solve!{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
                                         T::Symbol=:N)
 
@@ -163,7 +168,7 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
     if T == :N
-        if typeof(ps) == PardisoSolver
+        if isa(ps, PardisoSolver)
             set_iparm!(ps, 12, 1)
         else
             set_iparm!(ps, 12, 2)
@@ -171,20 +176,20 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     elseif T == :C || T == :T
         set_iparm!(ps, 12, 0)
     else
-        throw(ArgumentError("only :T, :N  and :C, are valid transpose symbols"))
+        throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
     end
 
     # If we want the matrix to only be transposed and not conjugated
-    # we have to conjugate it before sening it to Pardiso due to CSC CSR
+    # we have to conjugate it before sending it to Pardiso due to CSC CSR
     # mismatch.
 
     # This is the heuristics for choosing what matrix type to use
     ##################################################################
-    # - If hermitian try to solve with symmetroc positive definite.
+    # - If hermitian try to solve with symmetric positive definite.
     #   - On pos def exception, solve instead with symmetric indefinite.
     # - If complex and symmetric, solve with symmetric complex solver
     # - Else solve as unsymmetric.
-     if ishermitian(A)
+    if ishermitian(A)
         eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
         try
             if typeof(ps) == PardisoSolver
@@ -218,19 +223,19 @@ function solve!{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{T
     return X
 end
 
-function pardiso{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
+function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                                          A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
 
     dim_check(X, A, B)
 
     if Tv <: Complex && isreal(get_mtype(ps))
         throw(ErrorException(string("input matrix is complex while PardisoSolver ",
-                                    "has a real matrix type set")))
+                                    "has a real matrix type set: $(get_mtype(ps))")))
     end
 
     if Tv <: Real && !isreal(get_mtype(ps))
         throw(ErrorException(string("input matrix is real while PardisoSolver ",
-                                    "has a complex matrix type set")))
+                                    "has a complex matrix type set: $(get_mtype(ps))")))
     end
 
     N = Int32(size(A, 2))
@@ -245,12 +250,10 @@ function pardiso{Ti, Tv <: PardisoTypes}(ps::AbstractPardisoSolver, X::VecOrMat{
 end
 
 function dim_check(X, A, B)
-    size(X) == size(B) || throw(DimensionMismatch(string(
-                                 "Solution has $(size(X)), ",
-                                 "RHS has size as $(size(B)).")))
-    size(A,1) == size(B,1) || throw(DimensionMismatch(string(
-                                    "Matrix has $(size(A,1)) ",
-                                    "rows, RHS has $(size(B,1)) rows.")))
+    size(X) == size(B) || throw(DimensionMismatch(string("solution has $(size(X)), ",
+                                                         "RHS has size as $(size(B)).")))
+    size(A, 1) == size(B, 1) || throw(DimensionMismatch(string("matrix has $(size(A,1)) ",
+                                                               "rows, RHS has $(size(B,1)) rows.")))
 end
 
 

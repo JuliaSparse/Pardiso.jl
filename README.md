@@ -4,20 +4,26 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Installation
 
-**Note**: `Pardiso.jl` currently only works on Linux.
+After following the installation instructions please run `Pkg.build("Pardiso")`
 
 ### MKL PARDISO
 
-To use the MKL PARDISO the `MKLROOT` environment variable should be set. How to do this is shown [here](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started).
+Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly.
 
 The OpenMP library `libgomp.so` should also be available.
 
 ### PARDISO 5.0
 
+#### Windows
+
+Put `libpardiso500-WIN-X86-64.dll` in the `deps` folder. Run `Pkg.build("Pardiso")`
+
+#### Linux
+
 For PARDISO 5.0 the following libraries should be loadable from within Julia with `dlopen`.
 
 * `libpardiso500-XXX.so` - The PARDISO library. Can be put in the `deps` folder.
-* `libblas.so` - A (fast) BLAS library.
+* `libblas.so` - A (fast) BLAS library. Note that for technical reasons we cannot reuse Julia's BLAS library so 
 * `liblapack.so` - A LAPACK library.
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
 * `libgomp.so` - Library for OpenMP
@@ -203,7 +209,3 @@ In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `
 # Contributions
 
 If you have suggestions or idea of improving this package, please file an issue or even better, create a PR!
-
-## TODO:
-
-Test and make work on MacOS and Windows and using all different `libardiso` .so files available for download.
