@@ -54,32 +54,7 @@ function __init__()
         warn(string("""No Pardiso library found when Pkg.build("Pardiso") ran, this package will not currently be usable. """,
                     """Please see the installation instructions and rerun Pkg.build("Pardiso")."""))
     end
-#
-    if PARDISO_LIB_FOUND
-        try
-            global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
-            global const init = Libdl.dlsym(libpardiso, "pardisoinit")
-            global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
-            global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
-            global const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
-            global const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
-            global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
-            global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
-            global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
-            # Windows Pardiso lib comes with MKL prebaked but not on UNIX so we open them here
-            @unix_only begin
-                global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
-                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-            end
-            global const PARDISO_LOADED = true
-        catch e
-            warn("Pardiso did not manage to load, error thrown was: $e")
-            global const PARDISO_LOADED = false
-        end
-    else
-        global const PARDISO_LOADED = true
-    end
 
    if MKL_PARDISO_LIB_FOUND
         try
@@ -93,6 +68,7 @@ function __init__()
 
             # Using the libmkl_rt on Ubuntu hung my computer
             @unix_only begin
+                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
                 global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
                 global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
@@ -110,6 +86,41 @@ function __init__()
     else
         global const MKL_PARDISO_LOADED = false
     end
+
+    if PARDISO_LIB_FOUND
+        println("loading")
+        try
+            global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
+            global const init = Libdl.dlsym(libpardiso, "pardisoinit")
+            global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
+            global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
+            global const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
+            global const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
+            global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
+            global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
+            global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+
+            # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
+            # if not MKL is loaded
+            @unix_only begin
+                global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
+                if !isdefined(:libgomp)
+                    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+                end
+                if !MKL_PARDISO_LOADED
+                    global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+                    global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
+                end
+            end
+            global const PARDISO_LOADED = true
+        catch e
+            warn("Pardiso did not manage to load, error thrown was: $e")
+            global const PARDISO_LOADED = false
+        end
+    else
+        global const PARDISO_LOADED = false
+    end
+
 end
 
 include("../deps/deps.jl")
