@@ -4,31 +4,23 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Installation
 
-After following the installation instructions please run `Pkg.build("Pardiso")`
-
 ### MKL PARDISO
 
-Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly.
-
-The OpenMP library `libgomp.so` should also be available.
+* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly. 
+* Run `Pkg.build("Pardiso")`
 
 ### PARDISO 5.0
 
 #### Windows
 
-Put `libpardiso500-WIN-X86-64.dll` in the `deps` folder. Run `Pkg.build("Pardiso")`
+* Put the PARDISO library `libpardiso500-WIN-X86-64.dll` in the `deps` folder. Run `Pkg.build("Pardiso")`
+* Run `Pkg.build("Pardiso")`
 
-#### Linux
+#### UNIX systems
 
-For PARDISO 5.0 the following libraries should be loadable from within Julia with `dlopen`.
-
-* `libpardiso500-XXX.so` - The PARDISO library. Can be put in the `deps` folder.
-* `libblas.so` - A (fast) BLAS library. Note that for technical reasons we cannot reuse Julia's BLAS library so 
-* `liblapack.so` - A LAPACK library.
-* `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
-* `libgomp.so` - Library for OpenMP
-
-**Note**: The BLAS library should run in a single thread for optimal performance.
+* Put the PARDISO library `libpardiso500-XXX.so` in the `deps` folder.
+* Make sure OpenMP is installed.
+* Run `Pkg.build("Pardiso")`
 
 ## Basic Usage
 
@@ -46,13 +38,13 @@ The number of threads to use are set in different ways for MKL PARDISO and PARDI
 #### MKL PARDISO
 
 ```jl
-set_nprocs(ps, i) # Sets the number of threads
+set_nprocs!(ps, i) # Sets the number of threads
 get_nprocs(ps) # Gets the number of threads
 ```
 
 #### PARDISO 5.0
 
-The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
+The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
 
 The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
@@ -65,7 +57,7 @@ Solving equations is done with the `solve` and `solve!` functions. They have the
 
 The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
 
-Here is a contrived example of solving a system of real equations with two right hand sides:
+Here is an example of solving a system of real equations with two right hand sides:
 
 ```jl
 ps = PardisoSolver()
@@ -107,7 +99,7 @@ pardiso(ps, X, A, B)
 
 This will ensure that the properties you set will not be overwritten.
 
-For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first. It is possible to also use the corresponding integer as given in the manuals.
+For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first. It is possible to both use the enum as an input key to the options or the corresponding integer as given in the manuals.
 
 ### Setting the matrix type
 
@@ -124,11 +116,11 @@ The matrix type can be explicitly set with `set_matrixtype(ps, key)` where the k
 | COMPLEX_SYM          | 6       | complex and symmetric                     |
 | REAL_NONSYM          | 11      | real and nonsymmetric                     |
 | COMPLEX_NONSYM       | 13      | complex and nonsymmetric                  |
-        |
+
 The matrix type for a solver can be retrieved with `get_mtype(ps)`.
 
 ### Setting the solver (5.0 only)
-PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver(ps, key)` where the key has the following meaning:
+PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
 
 | enum               | integer | Solver                           |
 |--------------------|---------|----------------------------------|
@@ -138,7 +130,7 @@ PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_s
 
 ### Setting the phase
 
-Depending on the phase calls to `solve` (and `pardiso` which is mentioned later) does different things. The phase is set with `set_phase(ps, key)` where key has the meaning:
+Depending on the phase calls to `solve` (and `pardiso` which is mentioned later) does different things. The phase is set with `set_phase!(ps, key)` where key has the meaning:
 
 | enum                                  | integer |  Solver Execution Steps                                         |
 | --------------------------------------|---------|----------------------------------------------------------------|
@@ -172,7 +164,6 @@ set_dparm!(ps, i, v) # Sets DPARM[i] = v
 
 To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The default values depend on what solver and matrix type is set.
 
-
 ### MNUM, MAXFCT, PERM
 
 These are set and retrieved with the functions
@@ -194,7 +185,7 @@ PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency
 
 ```jl
 printstats(ps, A, B)
-checkmatrix(ps, A, B)
+checkmatrix(ps, A)
 checkvec(ps, B)
 ```
 
@@ -202,7 +193,7 @@ In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `
 
 ### Potential "gotchas"
 
-* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
+* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as conjugate transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
 * For **symmetric** matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends to add an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
 * Unless `IPARM[1] = 1`, all values in `IPARM` will be ignored and default values are used.
 

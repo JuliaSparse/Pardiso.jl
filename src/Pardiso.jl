@@ -56,7 +56,7 @@ function __init__()
     end
 #
     if PARDISO_LIB_FOUND
-        try 
+        try
             global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
             global const init = Libdl.dlsym(libpardiso, "pardisoinit")
             global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
@@ -66,13 +66,10 @@ function __init__()
             global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
             global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
-            
+
             # Windows Pardiso lib comes with MKL prebaked but not on UNIX so we open them here
             @unix_only begin
                 global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
-                global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-                global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
-                global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
                 global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
             end
             global const PARDISO_LOADED = true
@@ -86,15 +83,24 @@ function __init__()
 
    if MKL_PARDISO_LIB_FOUND
         try
-            @windows_only global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
+            @windows_only begin
+                global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
+                global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
+                global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
+                global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
+                global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
+            end
 
-            @unix_only Libdl.dlopen(joinpath(MKLROOT, "lib", "intel64", "libmkl_core"), Libdl.RTLD_GLOBAL)
-
-            global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
-            global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
-            global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
-            global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
-       
+            # Using the libmkl_rt on Ubuntu hung my computer
+            @unix_only begin
+                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
+                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
+                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
+                global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
+                global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
+                global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
+                global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
+            end
             global const MKL_PARDISO_LOADED = true
 
         catch e
