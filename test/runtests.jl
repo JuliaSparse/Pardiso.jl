@@ -1,65 +1,70 @@
+ENV["OMP_NUM_THREADS"] = 2
+
+if VERSION >= v"0.5-"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
+
 using Pardiso
-using Base.Test
-using Base.SparseMatrix
 
 srand(1234)
-ENV["OMP_NUM_THREADS"] = 1
 
 psolvers = DataType[]
 
-
 Pardiso.MKL_PARDISO_LOADED && push!(psolvers, MKLPardisoSolver)
 Pardiso.PARDISO_LOADED && push!(psolvers, PardisoSolver)
+
+println("Testing ", psolvers)
 
 if length(psolvers) == 0
     error("No Pardiso library managed to load. Unable to run tests.")
 end
 
 # Test solver + for real and complex data
-let
+@testset "solving" begin
 for pardiso_type in psolvers
-    print(pardiso_type)
-    for data_type in [Float64, Complex128]
+    for T in (Float64, Complex128)
         ps = pardiso_type()
         pardisoinit(ps)
 
-        if data_type == Float64
-            set_mtype(ps, 11)
+        if T == Float64
+            set_matrixtype!(ps, 11)
         else
-            set_mtype(ps, 13)
+            set_matrixtype!(ps, 13)
         end
 
-        A1 = sparse(rand(data_type, 10,10))
-        B = rand(data_type, 10, 2)
+        A1 = sparse(rand(T, 10,10))
+        B = rand(T, 10, 2)
         X = similar(B)
 
         # Test unsymmetric, herm indef, herm posdef and symmetric
         for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, A1 + A1.']
 
             solve!(ps, X, A, B)
-            @test_approx_eq X A\B
+            @test X ≈ A\B
 
             X = solve(ps, A, B)
-            @test_approx_eq X A\B
+            @test X ≈ A\B
 
             solve!(ps, X, A, B, :C)
-            @test_approx_eq X A'\B
+            @test X ≈ A'\B
 
             X = solve(ps, A, B, :C)
-            @test_approx_eq X A'\B
+            @test X ≈ A'\B
 
             solve!(ps, X, A, B, :T)
-            @test_approx_eq X A.'\B
+            @test X ≈ A.'\B
 
             X = solve(ps, A, B, :T)
-            @test_approx_eq X A.'\B
+            @test X ≈ A.'\B
         end
     end
 end
-end
+end #testset
 
-# Test some errors and matrix/vec checkers.
-let
+@testset "error checks" begin
 for pardiso_type in psolvers
 
     ps = pardiso_type()
@@ -75,31 +80,31 @@ for pardiso_type in psolvers
     end
 
 
-    set_mtype(ps, 13)
+    set_matrixtype!(ps, 13)
     @test_throws ErrorException pardiso(ps, X, A, B)
     @test_throws ArgumentError solve(ps, A, B, :P)
     @test_throws ArgumentError solve!(ps, X, A, B, :P)
 
-    set_mtype(ps, 11)
+    set_matrixtype!(ps, 11)
     X = zeros(12, 2)
     @test_throws DimensionMismatch solve!(ps,X, A, B)
 
     B = rand(12, 2)
     @test_throws DimensionMismatch solve(ps, A, B)
 end
-end
+end # testset
 
 
-let
+@testset "getters and setters" begin
 for pardiso_type in psolvers
     ps = pardiso_type()
-    set_iparm(ps, 1, 0)
+    set_iparm!(ps, 1, 0)
     pardisoinit(ps)
     @test get_iparm(ps, 1) == 1
 
-    @test_throws ArgumentError set_phase(ps, 5)
-    @test_throws ArgumentError set_msglvl(ps, 2)
-    @test_throws ArgumentError set_mtype(ps, 15)
+    @test_throws ArgumentError set_phase!(ps, 5)
+    @test_throws ArgumentError set_msglvl!(ps, 2)
+    @test_throws ArgumentError set_matrixtype!(ps, 15)
 
     if typeof(pardiso_type) == PardisoSolver
         @test_throws ArgumentError set_solver(ps, 2)
@@ -111,16 +116,16 @@ for pardiso_type in psolvers
         @test get_solver(ps) == 1
     end
 
-    set_iparm(ps, 13, 100)
+    set_iparm!(ps, 13, 100)
     @test get_iparm(ps, 13) == 100
 
-    set_mtype(ps, 1)
-    @test get_mtype(ps) == 1
+    set_matrixtype!(ps, Pardiso.REAL_SYM)
+    @test get_mtype(ps) == Pardiso.REAL_SYM
 
-    set_phase(ps, 12)
-    @test get_phase(ps) == 12
+    set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT)
+    @test get_phase(ps) == Pardiso.ANALYSIS_NUM_FACT
 
-    set_msglvl(ps, 1)
-    @test get_msglvl(ps) == 1
+    set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
+    @test get_msglvl(ps) == Pardiso.MESSAGE_LEVEL_ON
 end
-end
+end # testset

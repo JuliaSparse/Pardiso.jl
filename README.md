@@ -4,25 +4,23 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Installation
 
-**Note**: `Pardiso.jl` currently only works on Linux.
-
 ### MKL PARDISO
 
-To use the MKL PARDISO the `MKLROOT` environment variable should be set. How to do this is shown [here](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started).
-
-The OpenMP library `libgomp.so` should also be available.
+* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly. 
+* Run `Pkg.build("Pardiso")`
 
 ### PARDISO 5.0
 
-For PARDISO 5.0 the following libraries should be loadable from within Julia with `dlopen`.
+#### Windows
 
-* `libpardiso.so` - The PARDISO library.
-* `libblas.so` - A (fast) BLAS library.
-* `liblapack.so` - A LAPACK library.
-* `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
-* `libgomp.so` - Library for OpenMP
+* Put the PARDISO library `libpardiso500-WIN-X86-64.dll` in the `deps` folder. Run `Pkg.build("Pardiso")`
+* Run `Pkg.build("Pardiso")`
 
-**Note**: The BLAS library should run in a single thread for optimal performance.
+#### UNIX systems
+
+* Put the PARDISO library `libpardiso500-XXX.so` in the `deps` folder.
+* Make sure OpenMP is installed.
+* Run `Pkg.build("Pardiso")`
 
 ## Basic Usage
 
@@ -40,13 +38,13 @@ The number of threads to use are set in different ways for MKL PARDISO and PARDI
 #### MKL PARDISO
 
 ```jl
-set_nprocs(ps, i) # Sets the number of threads
+set_nprocs!(ps, i) # Sets the number of threads
 get_nprocs(ps) # Gets the number of threads
 ```
 
 #### PARDISO 5.0
 
-The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. If this variable does not exist, an exception is thrown. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
+The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
 
 The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
@@ -59,7 +57,7 @@ Solving equations is done with the `solve` and `solve!` functions. They have the
 
 The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
 
-Here is a contrived example of solving a system of real equations with two right hand sides:
+Here is an example of solving a system of real equations with two right hand sides:
 
 ```jl
 ps = PardisoSolver()
@@ -101,83 +99,84 @@ pardiso(ps, X, A, B)
 
 This will ensure that the properties you set will not be overwritten.
 
+For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first. It is possible to both use the enum as an input key to the options or the corresponding integer as given in the manuals.
+
 ### Setting the matrix type
 
-The matrix type can be explicitly set with `set_mtype(ps, key)` where the key has the following meaning:
+The matrix type can be explicitly set with `set_matrixtype(ps, key)` where the key has the following meaning:
 
-| key   | Matrix type                               |
-|----   |-----------------------------------------  |
-| 1     | real and structurally symmetric           |
-| 2     | real and symmetric positive definite      |
-| -2    | real and symmetric indefinite             |
-| 3     | complex and structurally symmetric        |
-| 4     | complex and Hermitian positive definite   |
-| -4    | complex and Hermitian indefinite          |
-| 6     | complex and symmetric                     |
-| 11    | real and nonsymmetric                     |
-| 13    | complex and nonsymmetric                  |
+| enum                 | integer | Matrix type                               |
+|--------------------- |---------| ----------------------------------------  |
+| REAL_SYM             | 1       | real and structurally symmetric           |
+| REAL_SYM_POSDEF      | 2       | real and symmetric positive definite      |
+| REAL_SYM_INDEF       | -2      | real and symmetric indefinite             |
+| COMPLEX_STRUCT_SYM   | 3       | complex and structurally symmetric        |
+| COMPLEX_HERM_POSDEF  | 4       | complex and Hermitian positive definite   |
+| COMPLEX_HERM_INDEF   | -4      | complex and Hermitian indefinite          |
+| COMPLEX_SYM          | 6       | complex and symmetric                     |
+| REAL_NONSYM          | 11      | real and nonsymmetric                     |
+| COMPLEX_NONSYM       | 13      | complex and nonsymmetric                  |
 
 The matrix type for a solver can be retrieved with `get_mtype(ps)`.
 
 ### Setting the solver (5.0 only)
-PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver(ps, key)` where the key has the following meaning:
+PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
 
-| key | Solver                           |
-|-----|----------------------------------|
-| 0   | sparse direct solver             |
-| 1   | multi-recursive iterative solver |
+| enum               | integer | Solver                           |
+|--------------------|---------|----------------------------------|
+| DIRECT_SOLVER      | 0       | sparse direct solver             |
+| ITERATIVE_SOLVER   | 1       | multi-recursive iterative solver |
 
 
 ### Setting the phase
 
-Depending on the phase calls to `solve` (and `pardiso` which is mentioned later) does different things. The phase is set with `set_phase(ps, key)` where key has the meaning:
+Depending on the phase calls to `solve` (and `pardiso` which is mentioned later) does different things. The phase is set with `set_phase!(ps, key)` where key has the meaning:
 
-| key   | Solver Execution Steps                                         |
-|-------|----------------------------------------------------------------|
-| 11    | Analysis                                                       |
-| 12    | Analysis, numerical factorization                              |
-| 13    | Analysis, numerical factorization, solve, iterative refinement |
-| 22    | Numerical factorization                                        |
-| -22   | Selected Inversion                                             |
-| 23    | Numerical factorization, solve, iterative refinement           |
-| 33    | Solve, iterative refinement                                    |
-|331    | MKL only, like phase=33, but only forward substitution         |
-|332    | MKL only, like phase=33, but only diagonal substitution (if available) |
-|333    | MKL only ,like phase=33, but only backward substitution
-| 0     | Release internal memory for L and U matrix number MNUM         |
-| -1    | Release all internal memory for all matrices                   |
+| enum                                  | integer |  Solver Execution Steps                                         |
+| --------------------------------------|---------|----------------------------------------------------------------|
+| ANALYSIS                              | 11      | Analysis                                                       |
+| ANALYSIS_NUM_FACT                     | 12      | Analysis, numerical factorization                              |
+| ANALYSIS_NUM_FACT_SOLVE_REFINE        | 13      | Analysis, numerical factorization, solve, iterative refinement |
+| NUM_FACT                              | 22      | Numerical factorization                                        |
+| SELECTED_INVERSION                    | -22     | Selected Inversion                                             |
+| NUM_FACT_SOLVE_REFINE                 | 23      | Numerical factorization, solve, iterative refinement           |
+| SOLVE_ITERATIVE_REFINE                | 33      | Solve, iterative refinement                                    |
+| SOLVE_ITERATIVE_REFINE_ONLY_FORWARD   | 331     | MKL only, like phase=33, but only forward substitution         |
+| SOLVE_ITERATIVE_REFINE_ONLY_DIAG      | 332     | MKL only, like phase=33, but only diagonal substitution (if available) |
+| SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD  | 333     | MKL only, like phase=33, but only backward substitution
+| RELEASE_LU_MNUM                       | 0       | Release internal memory for L and U matrix number MNUM         |
+| RELEASE_ALL                           | -1      | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
-Advanced users likely want to explicitly set and retrieve the `DPARM` (5.0 only) and `IPARM` settings.
+Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (5.0 only) parameters.
 This can be done with the getters and setters:
 
 ```jl
 get_iparm(ps, i) # Gets IPARM[i]
 get_iparms(ps) # Gets IPARM
-set_iparm(ps, i, v) # Sets IPARM[i] = v
+set_iparm!(ps, i, v) # Sets IPARM[i] = v
 
 # 5.0 only
 get_dparm(ps, i) # Gets DPARM[i]
 get_dparms(ps) # Gets DPARM
-set_dparm(ps, i, v) # Sets DPARM[i] = v
+set_dparm!(ps, i, v) # Sets DPARM[i] = v
 ```
 
 To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The default values depend on what solver and matrix type is set.
-
 
 ### MNUM, MAXFCT, PERM
 
 These are set and retrieved with the functions
 
 ```jl
-set_mnum(ps, i)
+set_mnum!(ps, i)
 get_mnum(ps)
 
-set_maxfct(ps, i)
+set_maxfct!(ps, i)
 get_maxfct(ps)
 
 get_perm(ps)
-set_perm(ps, perm) # Perm is a Vector{Int}
+set_perm!(ps, perm) # Perm is a Vector{Int}
 ```
 
 ### Matrix and vector checkers
@@ -186,15 +185,15 @@ PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency
 
 ```jl
 printstats(ps, A, B)
-checkmatrix(ps, A, B)
-checkvec(B)
+checkmatrix(ps, A)
+checkvec(ps, B)
 ```
 
 In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `pardiso`.
 
 ### Potential "gotchas"
 
-* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
+* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as conjugate transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
 * For **symmetric** matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends to add an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
 * Unless `IPARM[1] = 1`, all values in `IPARM` will be ignored and default values are used.
 
