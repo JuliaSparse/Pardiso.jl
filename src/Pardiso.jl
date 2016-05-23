@@ -1,6 +1,6 @@
 module Pardiso
 
-if !isfile(joinpath(Pkg.dir(), "Pardiso", "deps", "deps.jl"))
+if !isfile(joinpath(dirname(@__FILE__), "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
 end
 

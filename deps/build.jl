@@ -8,10 +8,10 @@ isfile("deps.jl") && rm("deps.jl")
     "libpardiso"
 ]
 
-@windows_only const LIBPARDISONAMES = ["libpardiso500-WIN-X86-64.dll", "libpardiso"] 
+@windows_only const LIBPARDISONAMES = ["libpardiso500-WIN-X86-64.dll", "libpardiso"]
 
 const PATH_PREFIXES = [
-    joinpath(Pkg.dir(), "Pardiso", "deps"),
+    dirname(@__FILE__),
     ""
 ]
 
