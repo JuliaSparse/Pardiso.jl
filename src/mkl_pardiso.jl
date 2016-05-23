@@ -1,43 +1,4 @@
-try
-    const MKLROOT = ENV["MKLROOT"]
-    if Int === Int64
-        global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
-        global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
-    else
-        # Untested!!
-        global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_core"), Libdl.RTLD_GLOBAL)
-        global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-        global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
-    end
-    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-    global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
-    global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
-    global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
-    global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
-    global const MKL_PARDISO_LOADED = true
-catch e
-    println("Info: MKL Pardiso did not load because: $e")
-    global const MKL_PARDISO_LOADED = false
-end
-
 const MKL_DOMAIN_PARDISO = @compat Int32(4)
-
-
-@compat const MKL_PHASES = Dict{Int, String}(
- 11 => "Analysis",
- 12 => "Analysis, numerical factorization",
- 13 => "Analysis, numerical factorization, solve, iterative refinement",
- 22 => "Numerical factorization",
--22 => "Selected Inversion",
- 23 => "Numerical factorization, solve, iterative refinement",
- 33 => "Solve, iterative refinement",
-331 => "like phase=33, but only forward substitution",
-332 => "like phase=33, but only diagonal substitution (if available)",
-333 => "like phase=33, but only backward substitution",
-  0 => "Release internal memory for L and U matrix number MNUM",
- -1 => "Release all internal memory for all matrices")
-
 
 type MKLPardisoSolver <: AbstractPardisoSolver
     pt::Vector{Int}
@@ -102,7 +63,7 @@ function get_matrix(ps::MKLPardisoSolver, A, T)
     error("Unhandled matrix type")
 end
 
-@inline function ccall_pardisoinit(ps::MKLPardisoSolver)
+function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Ref{Int32}(0)
     ccall(mkl_init, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
@@ -111,7 +72,7 @@ end
 end
 
 
-@inline function ccall_pardiso{Tv}(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
+function ccall_pardiso{Tv}(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
                                    NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv})
     ERR = Ref{Int32}(0)
     ccall(mkl_pardiso_f, Void,
@@ -123,11 +84,10 @@ end
           &N, AA, IA, JA, ps.perm,
           &NRHS, ps.iparm, &ps.msglvl, B, X,
           ERR)
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
 end
 
-function check_error(ps::MKLPardisoSolver, errv::Base.RefValue{Int32})
-    err = errv[]
+function check_error(ps::MKLPardisoSolver, err::Integer)
     err != -1  || throw(PardisoException("Input inconsistent."))
     err != -2  || throw(PardisoException("Not enough memory."))
     err != -3  || throw(PardisoException("Reordering problem."))

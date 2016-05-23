@@ -4,7 +4,8 @@ isfile("deps.jl") && rm("deps.jl")
 const LIBPARDISONAMES = [
     "libpardiso500-GNU461-X86-64",
     "libpardiso500-GNU472-X86-64",
-    "libpardiso500-GNU481-X86-64"
+    "libpardiso500-GNU481-X86-64",
+    "libpardiso"
 ]
 
 const PATH_PREFIXES = [

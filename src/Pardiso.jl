@@ -47,9 +47,13 @@ typealias PardisoTypes Union{Float64, Complex128}
 abstract AbstractPardisoSolver
 
 function __init__()
+    # Global variables used here are defined in the created deps.jl file in the deps folder
     if !(MKL_PARDISO_LIB_FOUND || PARDISO_LIB_FOUND)
         warn("No Pardiso library managed to load.")
     end
+
+    global const PARDISO_LOADED = false
+    global const MKL_PARDISO_LOADED = false
 
     if PARDISO_LIB_FOUND
         try
@@ -69,10 +73,31 @@ function __init__()
             global const PARDISO_LOADED = true
         catch e
             println("Info: Pardiso did not load because: $e")
-            global const PARDISO_LOADED = false
         end
-    else
-        global const PARDISO_LOADED = false
+    end
+
+    if MKL_PARDISO_LIB_FOUND
+        try
+            global const MKLROOT = ENV["MKLROOT"]
+            if Int === Int64
+                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
+                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
+                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
+            else
+                # Untested!!
+                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_core"), Libdl.RTLD_GLOBAL)
+                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
+                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/ia32/libmkl_gf"), Libdl.RTLD_GLOBAL)
+            end
+            global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
+            global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
+            global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
+            global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
+            global const MKL_PARDISO_LOADED = true
+        catch e
+            println("Info: MKL Pardiso did not load because: $e")
+        end
     end
 end
 

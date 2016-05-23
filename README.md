@@ -16,7 +16,7 @@ The OpenMP library `libgomp.so` should also be available.
 
 For PARDISO 5.0 the following libraries should be loadable from within Julia with `dlopen`.
 
-* `libpardiso.so` - The PARDISO library.
+* `libpardiso500-XXX.so` - The PARDISO library. Can be put in the `deps` folder.
 * `libblas.so` - A (fast) BLAS library.
 * `liblapack.so` - A LAPACK library.
 * `libgfortran.so` - The gfortran library. Should correspond to the same version as PARDISO is compiled against.
@@ -101,67 +101,67 @@ pardiso(ps, X, A, B)
 
 This will ensure that the properties you set will not be overwritten.
 
-For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first.
+For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first. It is possible to also use the corresponding integer as given in the manuals.
 
 ### Setting the matrix type
 
 The matrix type can be explicitly set with `set_matrixtype(ps, key)` where the key has the following meaning:
 
-| enum                 | Matrix type                               |
-|--------------------- |-----------------------------------------  |
-| REAL_SYM             | real and structurally symmetric           |
-| REAL_SYM_POSDEF      | real and symmetric positive definite      |
-| REAL_SYM_INDEF       | real and symmetric indefinite             |
-| COMPLEX_STRUCT_SYM   | complex and structurally symmetric        |
-| COMPLEX_HERM_POSDEF  | complex and Hermitian positive definite   |
-| COMPLEX_HERM_INDEF   | complex and Hermitian indefinite          |
-| COMPLEX_SYM          | complex and symmetric                     |
-| REAL_NONSYM          | real and nonsymmetric                     |
-| COMPLEX_NONSYM       | complex and nonsymmetric                  |
-
+| enum                 | integer | Matrix type                               |
+|--------------------- |---------| ----------------------------------------  |
+| REAL_SYM             | 1       | real and structurally symmetric           |
+| REAL_SYM_POSDEF      | 2       | real and symmetric positive definite      |
+| REAL_SYM_INDEF       | -2      | real and symmetric indefinite             |
+| COMPLEX_STRUCT_SYM   | 3       | complex and structurally symmetric        |
+| COMPLEX_HERM_POSDEF  | 4       | complex and Hermitian positive definite   |
+| COMPLEX_HERM_INDEF   | -4      | complex and Hermitian indefinite          |
+| COMPLEX_SYM          | 6       | complex and symmetric                     |
+| REAL_NONSYM          | 11      | real and nonsymmetric                     |
+| COMPLEX_NONSYM       | 13      | complex and nonsymmetric                  |
+        |
 The matrix type for a solver can be retrieved with `get_mtype(ps)`.
 
 ### Setting the solver (5.0 only)
 PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver(ps, key)` where the key has the following meaning:
 
-| key                | Solver                           |
-|--------------------|----------------------------------|
-| DIRECT_SOLVER      | sparse direct solver             |
-| ITERATIVE_SOLVER   | multi-recursive iterative solver |
+| enum               | integer | Solver                           |
+|--------------------|---------|----------------------------------|
+| DIRECT_SOLVER      | 0       | sparse direct solver             |
+| ITERATIVE_SOLVER   | 1       | multi-recursive iterative solver |
 
 
 ### Setting the phase
 
 Depending on the phase calls to `solve` (and `pardiso` which is mentioned later) does different things. The phase is set with `set_phase(ps, key)` where key has the meaning:
 
-| key                                  | Solver Execution Steps                                         |
-|--------------------------------------|----------------------------------------------------------------|
-|ANALYSIS                              | Analysis                                                       |
-|ANALYSIS_NUM_FACT                     | Analysis, numerical factorization                              |
-|ANALYSIS_NUM_FACT_SOLVE_REFINE        | Analysis, numerical factorization, solve, iterative refinement |
-|NUM_FACT                              | Numerical factorization                                        |
-|SELECTED_INVERSION                    | Selected Inversion                                             |
-|NUM_FACT_SOLVE_REFINE                 | Numerical factorization, solve, iterative refinement           |
-|SOLVE_ITERATIVE_REFINE                | Solve, iterative refinement                                    |
-|SOLVE_ITERATIVE_REFINE_ONLY_FORWARD   | MKL only, like phase=33, but only forward substitution         |
-|SOLVE_ITERATIVE_REFINE_ONLY_DIAG      | MKL only, like phase=33, but only diagonal substitution (if available) |
-|SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD  | MKL only, like phase=33, but only backward substitution
-|RELEASE_LU_MNUM                       | Release internal memory for L and U matrix number MNUM         |
-|RELEASE_ALL                            | Release all internal memory for all matrices                   |
+| enum                                  | integer |  Solver Execution Steps                                         |
+| --------------------------------------|---------|----------------------------------------------------------------|
+| ANALYSIS                              | 11      | Analysis                                                       |
+| ANALYSIS_NUM_FACT                     | 12      | Analysis, numerical factorization                              |
+| ANALYSIS_NUM_FACT_SOLVE_REFINE        | 13      | Analysis, numerical factorization, solve, iterative refinement |
+| NUM_FACT                              | 22      | Numerical factorization                                        |
+| SELECTED_INVERSION                    | -22     | Selected Inversion                                             |
+| NUM_FACT_SOLVE_REFINE                 | 23      | Numerical factorization, solve, iterative refinement           |
+| SOLVE_ITERATIVE_REFINE                | 33      | Solve, iterative refinement                                    |
+| SOLVE_ITERATIVE_REFINE_ONLY_FORWARD   | 331     | MKL only, like phase=33, but only forward substitution         |
+| SOLVE_ITERATIVE_REFINE_ONLY_DIAG      | 332     | MKL only, like phase=33, but only diagonal substitution (if available) |
+| SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD  | 333     | MKL only, like phase=33, but only backward substitution
+| RELEASE_LU_MNUM                       | 0       | Release internal memory for L and U matrix number MNUM         |
+| RELEASE_ALL                           | -1      | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
-Advanced users likely want to explicitly set and retrieve the `DPARM` (5.0 only) and `IPARM` settings.
+Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (5.0 only) parameters.
 This can be done with the getters and setters:
 
 ```jl
 get_iparm(ps, i) # Gets IPARM[i]
 get_iparms(ps) # Gets IPARM
-set_iparm(ps, i, v) # Sets IPARM[i] = v
+set_iparm!(ps, i, v) # Sets IPARM[i] = v
 
 # 5.0 only
 get_dparm(ps, i) # Gets DPARM[i]
 get_dparms(ps) # Gets DPARM
-set_dparm(ps, i, v) # Sets DPARM[i] = v
+set_dparm!(ps, i, v) # Sets DPARM[i] = v
 ```
 
 To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The default values depend on what solver and matrix type is set.
@@ -203,3 +203,7 @@ In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `
 # Contributions
 
 If you have suggestions or idea of improving this package, please file an issue or even better, create a PR!
+
+## TODO:
+
+Test and make work on MacOS and Windows and using all different `libardiso` .so files available for download.

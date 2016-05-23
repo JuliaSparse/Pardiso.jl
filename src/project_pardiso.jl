@@ -172,12 +172,11 @@ function checkvec{Tv <: PardisoTypes}(ps, B::VecOrMat{Tv})
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
           &N, &NRHS, B, ERR)
 
-    check_error(ps, ERR)
+    check_error(ps, ERR[])
     return
 end
 
-function check_error(ps::PardisoSolver, errv::Base.RefValue{Int32})
-    err = errv[]
+function check_error(ps::PardisoSolver, err::Integer)
     err != -1  || throw(PardisoException("Input inconsistent."))
     err != -2  || throw(PardisoException("Not enough memory."))
     err != -3  || throw(PardisoException("Reordering problem."))
