@@ -18,10 +18,11 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 #### UNIX systems
 
-* Put the PARDISO library `libpardiso500-XXX.so` in the `deps` folder.
+* Put the PARDISO library `libpardiso500-GNUXXX-X86-64.so` in the `deps` folder.
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
 * Make sure OpenMP is installed.
-* Run `Pkg.build("Pardiso")`
+* Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
+* Run `Pkg.build("Pardiso")``
 
 ## Basic Usage
 
@@ -30,24 +31,6 @@ This section will explain how to solve equations using `Pardiso.jl` with the def
 ## Creating the ParadisoSolver
 
 A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` or a `MKLPardisoSolver()` will be referred to as `ps`.
-
-
-### Setting the number of threads
-
-The number of threads to use are set in different ways for MKL PARDISO and PARDISO 5.0.
-
-#### MKL PARDISO
-
-```jl
-set_nprocs!(ps, i) # Sets the number of threads
-get_nprocs(ps) # Gets the number of threads
-```
-
-#### PARDISO 5.0
-
-The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
-
-The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
 ### Solving
 
@@ -85,6 +68,23 @@ julia> X
  -0.279381   7.24754
  -1.17295    8.47922
 ```
+
+### Setting the number of threads
+
+The number of threads to use are set in different ways for MKL PARDISO and PARDISO 5.0.
+
+#### MKL PARDISO
+
+```jl
+set_nprocs!(ps, i) # Sets the number of threads to use
+get_nprocs(ps) # Gets the number of threads being used
+```
+
+#### PARDISO 5.0
+
+The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
+
+The number of threads used by a `PardisoSolver` can be retrieved with `get_nprocs(ps)`
 
 ## More advanced usage.
 
@@ -165,6 +165,26 @@ set_dparm!(ps, i, v) # Sets DPARM[i] = v
 
 To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The default values depend on what solver and matrix type is set.
 
+### Setting message level
+
+It is possible for Pardiso to print out timings and statistics when solving. This is done by `set_msglvl!(ps, key)` where key has the meaning:
+
+| enum               | integer | Solver                           |
+|--------------------|---------|----------------------------------|
+| MESSAGE_LEVEL_OFF  | 0       | no statistics printed            |
+| MESSAGE_LEVEL_ON   | 1       | statistics printed               |
+
+
+### Matrix and vector checkers
+
+PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
+
+```jl
+printstats(ps, A, B)
+checkmatrix(ps, A)
+checkvec(ps, B)
+```
+
 ### MNUM, MAXFCT, PERM
 
 These are set and retrieved with the functions
@@ -178,16 +198,6 @@ get_maxfct(ps)
 
 get_perm(ps)
 set_perm!(ps, perm) # Perm is a Vector{Int}
-```
-
-### Matrix and vector checkers
-
-PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
-
-```jl
-printstats(ps, A, B)
-checkmatrix(ps, A)
-checkvec(ps, B)
 ```
 
 In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `pardiso`.
