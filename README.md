@@ -19,7 +19,7 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 #### UNIX systems
 
 * Put the PARDISO library `libpardiso500-XXX.so` in the `deps` folder.
-* Install a (fast) installation of a BLAS and LAPACK.
+* Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
 * Make sure OpenMP is installed.
 * Run `Pkg.build("Pardiso")`
 
