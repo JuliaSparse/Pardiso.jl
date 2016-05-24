@@ -120,7 +120,7 @@ for pardiso_type in psolvers
     @test get_iparm(ps, 13) == 100
 
     set_matrixtype!(ps, Pardiso.REAL_SYM)
-    @test get_mtype(ps) == Pardiso.REAL_SYM
+    @test get_matrixtype(ps) == Pardiso.REAL_SYM
 
     set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT)
     @test get_phase(ps) == Pardiso.ANALYSIS_NUM_FACT

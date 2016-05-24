@@ -21,7 +21,7 @@ import Base.show
 export PardisoSolver, MKLPardisoSolver
 export set_iparm!, set_dparm!, set_matrixtype!, set_solver!, set_phase!, set_msglvl!, set_nprocs!
 export get_iparm, get_iparms, get_dparm, get_dparms
-export get_mtype, get_solver, get_phase, get_msglvl, get_nprocs
+export get_matrixtype, get_solver, get_phase, get_msglvl, get_nprocs
 export set_maxfct!, set_perm!, set_mnum!
 export get_maxfct, get_perm, get_mnum
 export checkmatrix, checkvec, printstats, pardisoinit, pardiso
@@ -134,7 +134,7 @@ function set_matrixtype!(ps::AbstractPardisoSolver, v::MatrixType)
     ps.mtype = v
 end
 
-get_mtype(ps::AbstractPardisoSolver) = ps.mtype
+get_matrixtype(ps::AbstractPardisoSolver) = ps.mtype
 get_iparm(ps::AbstractPardisoSolver, i::Integer) = ps.iparm[i]
 get_iparms(ps::AbstractPardisoSolver) = ps.iparm
 set_iparm!(ps::AbstractPardisoSolver, i::Integer, v::Integer) = ps.iparm[i] = v
@@ -245,14 +245,14 @@ function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrM
 
     dim_check(X, A, B)
 
-    if Tv <: Complex && isreal(get_mtype(ps))
+    if Tv <: Complex && isreal(get_matrixtype(ps))
         throw(ErrorException(string("input matrix is complex while PardisoSolver ",
-                                    "has a real matrix type set: $(get_mtype(ps))")))
+                                    "has a real matrix type set: $(get_matrixtype(ps))")))
     end
 
-    if Tv <: Real && !isreal(get_mtype(ps))
+    if Tv <: Real && !isreal(get_matrixtype(ps))
         throw(ErrorException(string("input matrix is real while PardisoSolver ",
-                                    "has a complex matrix type set: $(get_mtype(ps))")))
+                                    "has a complex matrix type set: $(get_matrixtype(ps))")))
     end
 
     N = Int32(size(A, 2))

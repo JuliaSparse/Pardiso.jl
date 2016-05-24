@@ -41,7 +41,7 @@ end
 
 show(io::IO, ps::PardisoSolver) = print(io, string("$PardisoSolver:\n",
                                   "\tSolver: $(SOLVER_STRING[get_solver(ps)])\n",
-                                  "\tMatrix type: $(MATRIX_STRING[get_mtype(ps)])\n",
+                                  "\tMatrix type: $(MATRIX_STRING[get_matrixtype(ps)])\n",
                                   "\tPhase: $(PHASE_STRING[get_phase(ps)])\n",
                                   "\tNum processors: $(get_nprocs(ps))"))
 
@@ -64,7 +64,7 @@ get_solver(ps::PardisoSolver) = ps.solver
 
 
 function get_matrix(ps::PardisoSolver, A, T)
-    mtype = get_mtype(ps)
+    mtype = get_matrixtype(ps)
 
     if isposornegdef(mtype)
         T == :T && return tril(A)

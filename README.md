@@ -6,7 +6,7 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ### MKL PARDISO
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly. 
+* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly.
 * Run `Pkg.build("Pardiso")`
 
 ### PARDISO 5.0
@@ -118,7 +118,7 @@ The matrix type can be explicitly set with `set_matrixtype(ps, key)` where the k
 | REAL_NONSYM          | 11      | real and nonsymmetric                     |
 | COMPLEX_NONSYM       | 13      | complex and nonsymmetric                  |
 
-The matrix type for a solver can be retrieved with `get_mtype(ps)`.
+The matrix type for a solver can be retrieved with `get_matrixtype(ps)`.
 
 ### Setting the solver (5.0 only)
 PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
