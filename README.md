@@ -13,7 +13,7 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 #### Windows
 
-* Put the PARDISO library `libpardiso500-WIN-X86-64.dll` in the `deps` folder. Run `Pkg.build("Pardiso")`
+* Put the PARDISO library `libpardiso500-WIN-X86-64.dll` in the `deps` folder.
 * Run `Pkg.build("Pardiso")`
 
 #### UNIX systems
