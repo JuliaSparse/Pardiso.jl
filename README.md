@@ -104,7 +104,7 @@ For ease of use, `Pardiso.jl` provides enums for most options. These are not exp
 
 ### Setting the matrix type
 
-The matrix type can be explicitly set with `set_matrixtype(ps, key)` where the key has the following meaning:
+The matrix type can be explicitly set with `set_matrixtype!(ps, key)` where the key has the following meaning:
 
 | enum                 | integer | Matrix type                               |
 |--------------------- |---------| ----------------------------------------  |
