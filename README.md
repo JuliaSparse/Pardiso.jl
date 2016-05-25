@@ -207,6 +207,7 @@ In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `
 * Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
 * For **symmetric** matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends to add an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
 * Unless `IPARM[1] = 1`, all values in `IPARM` will be ignored and default values are used.
+* When solving a symmetric matrix, Pardiso expects only the upper triangular part. Since Julia has CSC matrices this means you should pass in `tril(A)` to the `pardiso` function. Use `checkmatrix` to see that you maaged to get the matrix in a valid format.
 
 # Contributions
 
