@@ -104,8 +104,7 @@ function __init__()
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
             @unix_only begin
-                global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
-                if !isdefined(:libgomp)
+                if !isdefined(Pardiso, :libgomp)
                     global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 end
                 if !MKL_PARDISO_LOADED
