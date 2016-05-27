@@ -88,7 +88,6 @@ function __init__()
     end
 
     if PARDISO_LIB_FOUND
-        println("loading")
         try
             global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
             global const init = Libdl.dlsym(libpardiso, "pardisoinit")
