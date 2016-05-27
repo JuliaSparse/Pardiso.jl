@@ -28,9 +28,9 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 This section will explain how to solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
 
-## Creating the ParadisoSolver
+## Creating the PardisoSolver
 
-A `ParadisoSolver` is created with `ParadisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `ParadisoSolver` or a `MKLPardisoSolver()` will be referred to as `ps`.
+A `PardisoSolver` is created with `PardisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or a `MKLPardisoSolver()` will be referred to as `ps`.
 
 ### Solving
 
