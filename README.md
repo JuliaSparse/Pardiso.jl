@@ -98,7 +98,9 @@ After using functionality in this section, calls should no longer be made to the
 pardiso(ps, X, A, B)
 ```
 
-This will ensure that the properties you set will not be overwritten.
+This will ensure that the properties you set will not be overwritten. 
+
+If you want, you can use `get_matrix(ps, A, T)` to return a matrix that is suitable to use with `pardiso` depending on the matrix type that `ps` has set. The parameter `T` is a symbol representing if you will solve the normal, transposed or conjugated system. These are represented by `:N, :T, :C)` respectively.
 
 For ease of use, `Pardiso.jl` provides enums for most options. These are not exported so has to either be explicitly imported or qualified with the module name first. It is possible to both use the enum as an input key to the options or the corresponding integer as given in the manuals.
 

@@ -26,6 +26,7 @@ export set_maxfct!, set_perm!, set_mnum!
 export get_maxfct, get_perm, get_mnum
 export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
+export get_matrix
 
 macro R_str(s)
     s
@@ -145,7 +146,7 @@ get_maxfct(ps::AbstractPardisoSolver) = ps.maxfct
 set_maxfct!(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
 
 get_perm(ps::AbstractPardisoSolver) = ps.perm
-set_perm!{T <: Integer}(ps::PardisoNumTypes, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
+set_perm!{T <: Integer}(ps::AbstractPardisoSolver, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
 
 get_phase(ps::AbstractPardisoSolver) = ps.phase
 
@@ -239,10 +240,11 @@ function solve!{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMa
     return X
 end
 
-function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
-                                         A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
-
-    dim_check(X, A, B)
+function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti},
+                                            B::VecOrMat{Tv})
+    if length(X) != 0
+        dim_check(X, A, B)
+    end
 
     if Tv <: Complex && isreal(get_matrixtype(ps))
         throw(ErrorException(string("input matrix is complex while PardisoSolver ",
@@ -265,12 +267,16 @@ function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrM
     ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 end
 
+pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, 0, Float64[], Int32[], Int32[], 0, Float64[], Float64[])
+function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
+    pardiso(ps, Tv[], A, B)
+end
+
 function dim_check(X, A, B)
     size(X) == size(B) || throw(DimensionMismatch(string("solution has $(size(X)), ",
                                                          "RHS has size as $(size(B)).")))
     size(A, 1) == size(B, 1) || throw(DimensionMismatch(string("matrix has $(size(A,1)) ",
                                                                "rows, RHS has $(size(B,1)) rows.")))
 end
-
 
 end # module
