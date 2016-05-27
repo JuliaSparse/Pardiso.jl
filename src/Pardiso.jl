@@ -99,7 +99,6 @@ function __init__()
             global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
             global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
-            global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
@@ -111,6 +110,7 @@ function __init__()
                     global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
                     global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
+                global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
             end
             global const PARDISO_LOADED = true
         catch e
