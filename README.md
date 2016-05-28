@@ -178,8 +178,6 @@ It is possible for Pardiso to print out timings and statistics when solving. Thi
 | MESSAGE_LEVEL_OFF  | 0       | no statistics printed            |
 | MESSAGE_LEVEL_ON   | 1       | statistics printed               |
 
-In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `pardiso`.
-
 ### Matrix and vector checkers
 
 PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
@@ -189,6 +187,8 @@ printstats(ps, A, B)
 checkmatrix(ps, A)
 checkvec(ps, B)
 ```
+
+In MKL PARDISO this is instead done by setting `IPARM[27]` to 1 before calling `pardiso`.
 
 ### MNUM, MAXFCT, PERM
 
