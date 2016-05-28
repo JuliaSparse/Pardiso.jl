@@ -4,6 +4,8 @@ The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.
 
 ## Installation
 
+The package itself is installed with `Pkg.add("Pardiso")` but you also need to follow the installation instructions below to install a working PARDISO library.
+
 ### MKL PARDISO
 
 * Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly.
