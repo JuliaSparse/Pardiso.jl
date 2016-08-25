@@ -1,14 +1,20 @@
 # remove deps.jl if it exists, in case build.jl fails
 isfile("deps.jl") && rm("deps.jl")
 
-@unix_only const LIBPARDISONAMES = [
+@static if is_unix() begin
+    const LIBPARDISONAMES = [
     "libpardiso500-GNU461-X86-64",
     "libpardiso500-GNU472-X86-64",
     "libpardiso500-GNU481-X86-64",
     "libpardiso"
 ]
+end
+end
 
-@windows_only const LIBPARDISONAMES = ["libpardiso500-WIN-X86-64.dll", "libpardiso"]
+@static if is_windows() begin 
+    const LIBPARDISONAMES = ["libpardiso500-WIN-X86-64.dll", "libpardiso"]
+end
+end
 
 const PATH_PREFIXES = [
     dirname(@__FILE__),

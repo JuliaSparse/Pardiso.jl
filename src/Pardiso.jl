@@ -59,16 +59,17 @@ function __init__()
 
    if MKL_PARDISO_LIB_FOUND
         try
-            @windows_only begin
+            @static if is_windows() begin
                 global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
                 global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
                 global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
                 global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
                 global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             end
+            end
 
             # Using the libmkl_rt on Ubuntu hung my computer
-            @unix_only begin
+            @static if is_unix() begin
                 global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
                 global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
@@ -77,6 +78,7 @@ function __init__()
                 global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
                 global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
                 global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
+            end
             end
             global const MKL_PARDISO_LOADED = true
 
@@ -102,7 +104,7 @@ function __init__()
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
-            @unix_only begin
+            @static if is_unix() begin
                 if !isdefined(Pardiso, :libgomp)
                     global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 end
@@ -111,6 +113,7 @@ function __init__()
                     global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
                 global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+            end
             end
             global const PARDISO_LOADED = true
         catch e
