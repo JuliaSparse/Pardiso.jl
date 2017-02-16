@@ -1,4 +1,6 @@
 # remove deps.jl if it exists, in case build.jl fails
+using Compat
+
 isfile("deps.jl") && rm("deps.jl")
 
 @unix_only const LIBPARDISONAMES = [
