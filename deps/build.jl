@@ -1,3 +1,5 @@
+using Compat
+
 # remove deps.jl if it exists, in case build.jl fails
 isfile("deps.jl") && rm("deps.jl")
 
