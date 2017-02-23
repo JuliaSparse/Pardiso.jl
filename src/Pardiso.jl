@@ -32,22 +32,20 @@ macro R_str(s)
     s
 end
 
-include("CEnum.jl")
-
-using .CEnum
-
 type PardisoException <: Exception
     info::String
 end
+
 type PardisoPosDefException <: Exception
     info::String
 end
+
 Base.showerror(io::IO, e::Union{PardisoException, PardisoPosDefException}) = print(io, e.info);
 
 
-typealias PardisoNumTypes Union{Float64, Complex128}
+const PardisoNumTypes = Union{Float64, Complex128}
 
-abstract AbstractPardisoSolver
+@compat abstract type AbstractPardisoSolver end
 
 function __init__()
     # Global variables used here are defined in the created deps.jl file in the deps folder

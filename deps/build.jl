@@ -13,7 +13,7 @@ isfile("deps.jl") && rm("deps.jl")
 end
 end
 
-@static if is_windows() begin 
+@static if is_windows() begin
     const LIBPARDISONAMES = ["libpardiso500-WIN-X86-64.dll", "libpardiso"]
 end
 end
