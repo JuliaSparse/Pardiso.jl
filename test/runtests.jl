@@ -1,12 +1,6 @@
 ENV["OMP_NUM_THREADS"] = 2
 
-if VERSION >= v"0.5-"
-    using Base.Test
-else
-    using BaseTestNext
-    const Test = BaseTestNext
-end
-
+using Base.Test
 using Pardiso
 
 srand(1234)
