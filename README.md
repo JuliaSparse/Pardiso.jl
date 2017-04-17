@@ -24,7 +24,7 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
 * Make sure OpenMP is installed.
 * Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
-* Run `Pkg.build("Pardiso")``
+* Run `Pkg.build("Pardiso")`
 
 ## Basic Usage
 
