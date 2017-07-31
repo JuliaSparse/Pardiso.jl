@@ -59,27 +59,15 @@ function __init__()
         try
             @static if is_windows() begin
                 global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
-                global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
-                global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
-                global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
-                global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             end
+            @static if !is_windows() begin
+                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_rt"), Libdl.RTLD_GLOBAL)
             end
-
-            # Using the libmkl_rt on Ubuntu hung my computer
-            @static if is_unix() begin
-                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
-                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
-                global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
-                global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
-                global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
-                global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
-            end
-            end
+            global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
+            global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
+            global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
+            global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             global const MKL_PARDISO_LOADED = true
-
         catch e
             warn("MKL Pardiso did not manage to load, error thrown was: $e")
             global const MKL_PARDISO_LOADED = false
@@ -262,6 +250,8 @@ function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrM
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
+
+    resize!(ps.perm, size(B, 1))
 
     NRHS = Int32(size(B, 2))
 
