@@ -4,6 +4,7 @@ using Compat
 isfile("deps.jl") && rm("deps.jl")
 
 const LIBPARDISONAMES = [
+    "libpardiso500-WIN-X86-64.dll",
     "libpardiso500-MACOS-X86-64.dylib",
     "libpardiso500-GNU461-X86-64",
     "libpardiso500-GNU472-X86-64",
