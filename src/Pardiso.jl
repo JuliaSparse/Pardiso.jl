@@ -1,3 +1,5 @@
+__precompile__()
+
 module Pardiso
 
 if !isfile(joinpath(dirname(@__FILE__), "..", "deps", "deps.jl"))
@@ -92,16 +94,13 @@ function __init__()
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
-            @static if Compat.Sys.isunix() begin
-                if !isdefined(Pardiso, :libgomp)
-                    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-                end
+            if Compat.Sys.isunix()
+                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 if !MKL_PARDISO_LOADED
                     global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
                     global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
                 global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-            end
             end
             global const PARDISO_LOADED = true
         catch e
