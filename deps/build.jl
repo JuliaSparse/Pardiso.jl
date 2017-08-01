@@ -32,7 +32,8 @@ function find_paradisolib()
                 return path, true
             catch e
                 if isfile(path)
-                    eprintln("found library but it failed to load due to:\n", e)
+                    eprintln("found library but it failed to load due to:")
+                    Base.showerror(STDERR, e)
                 end
             end
         end
