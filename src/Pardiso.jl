@@ -51,7 +51,7 @@ function __init__()
         try
             if Compat.Sys.iswindows()
                 global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
-            elseif Sys.isapple()
+            elseif Compat.Sys.isapple()
                  global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
             end
             if Compat.Sys.iswindows() || Compat.Sys.isapple()
@@ -92,7 +92,7 @@ function __init__()
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
-            @static if Sys.isunix() begin
+            @static if Compat.Sys.isunix() begin
                 if !isdefined(Pardiso, :libgomp)
                     global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 end
