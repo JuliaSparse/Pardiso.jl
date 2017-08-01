@@ -63,7 +63,7 @@ pardiso(ps, X, A_pardiso, B)
 @printf("PARDISO performed %d iterative refinement steps.\n", get_iparm(ps, 7))
 
 # Compute the residuals.
-R = maximum(abs(A*X - B))
+R = maximum(abs.(A*X - B))
 @printf("The maximum residual for the solution X is %0.3g.\n", R)
 
 # Free the PARDISO data structures.
