@@ -55,12 +55,13 @@ function __init__()
     end
 
 
-   if MKL_PARDISO_LIB_FOUND
+    if MKL_PARDISO_LIB_FOUND
         try
-            @static if is_windows() begin
+            if is_windows()
                 global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
-            end
-            @static if !is_windows() begin
+            elseif is_apple()
+                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
+            else
                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_rt"), Libdl.RTLD_GLOBAL)
             end
             global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")

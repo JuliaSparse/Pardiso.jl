@@ -3,20 +3,13 @@ using Compat
 # remove deps.jl if it exists, in case build.jl fails
 isfile("deps.jl") && rm("deps.jl")
 
-@static if is_unix() begin
-    const LIBPARDISONAMES = [
+const LIBPARDISONAMES = [
+    "libpardiso500-MACOS-X86-64.dylib",
     "libpardiso500-GNU461-X86-64",
     "libpardiso500-GNU472-X86-64",
     "libpardiso500-GNU481-X86-64",
     "libpardiso"
 ]
-end
-end
-
-@static if is_windows() begin
-    const LIBPARDISONAMES = ["libpardiso500-WIN-X86-64.dll", "libpardiso"]
-end
-end
 
 const PATH_PREFIXES = [
     dirname(@__FILE__),
@@ -30,12 +23,17 @@ function find_paradisolib()
     found_lib = false
     for prefix in PATH_PREFIXES
         for libname in LIBPARDISONAMES
+            local path
             try
                 path = joinpath(prefix, libname)
                 Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
                 global PARDISO_LIB_FOUND = true
                 eprintln("found libpardiso at $path, using it")
                 return path, true
+            catch e
+                if isfile(path)
+                    eprintln("found library but it failed to load due to:\n", e)
+                end
             end
         end
     end
