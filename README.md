@@ -18,9 +18,11 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 * Put the PARDISO library `libpardiso500-WIN-X86-64.dll` in the `deps` folder.
 * Run `Pkg.build("Pardiso")`
 
-#### UNIX systems
+#### UNIX / macOS
 
-* Put the PARDISO library `libpardiso500-GNUXXX-X86-64.so` in the `deps` folder.
+Note: Support for macOS is experimental, help to make it stable is appreciated.
+
+* Put the PARDISO library `libpardiso500-GNUXXX-X86-64.so` or `libpardiso500-MACOS-X86-64.dylib` in the `deps` folder located in `~/.julia/v0.x/Pardiso`.
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
 * Make sure OpenMP is installed.
 * Make sure that the version of `gfortran` corresponding to the pardiso library is installed.

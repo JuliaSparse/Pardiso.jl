@@ -1,6 +1,6 @@
-const MKL_DOMAIN_PARDISO = @compat Int32(4)
+const MKL_DOMAIN_PARDISO = Int32(4)
 
-type MKLPardisoSolver <: AbstractPardisoSolver
+mutable struct MKLPardisoSolver <: AbstractPardisoSolver
     pt::Vector{Int}
     iparm::Vector{Int32}
     mtype::MatrixType
@@ -36,7 +36,7 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
                                   "\tMatrix type: $(MATRIX_STRING[get_matrixtype(ps)])\n",
                                   "\tPhase: $(PHASE_STRING[get_phase(ps)])"))
 
-set_nprocs!(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32},Ptr{Int32}), &(@compat Int32(n)), &MKL_DOMAIN_PARDISO)
+set_nprocs!(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32}, Ptr{Int32}), &(Int32(n)), &MKL_DOMAIN_PARDISO)
 get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MKL_DOMAIN_PARDISO)
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
@@ -72,8 +72,8 @@ function ccall_pardisoinit(ps::MKLPardisoSolver)
 end
 
 
-function ccall_pardiso{Tv}(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
-                                   NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv})
+function ccall_pardiso(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
+                       NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
     ccall(mkl_pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},

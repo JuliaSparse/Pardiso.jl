@@ -1,4 +1,4 @@
-type PardisoSolver <: AbstractPardisoSolver
+mutable struct PardisoSolver <: AbstractPardisoSolver
     pt::Vector{Int}
     iparm::Vector{Int32}
     dparm::Vector{Float64}
@@ -94,8 +94,8 @@ end
 end
 
 
-@inline function ccall_pardiso{Tv}(ps::PardisoSolver, N, AA::Vector{Tv},
-                                   IA, JA, NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv})
+@inline function ccall_pardiso(ps::PardisoSolver, N, AA::Vector{Tv},
+                                   IA, JA, NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
     ccall(pardiso_f, Void,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
@@ -112,8 +112,8 @@ end
 
 
 # Different checks
-function printstats{Ti, Tv <: PardisoNumTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                                            B::VecOrMat{Tv})
+function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
+                    B::VecOrMat{Tv}) where {Ti,Tv <: PardisoNumTypes}
     N = Int32(size(A, 2))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -135,7 +135,7 @@ function printstats{Ti, Tv <: PardisoNumTypes}(ps::PardisoSolver, A::SparseMatri
     return
 end
 
-function checkmatrix{Ti, Tv <: PardisoNumTypes}(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti})
+function checkmatrix(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti}) where {Ti,Tv <: PardisoNumTypes}
     N = Int32(size(A, 1))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -158,7 +158,7 @@ function checkmatrix{Ti, Tv <: PardisoNumTypes}(ps::PardisoSolver, A::SparseMatr
     return
 end
 
-function checkvec{Tv <: PardisoNumTypes}(ps, B::VecOrMat{Tv})
+function checkvec(ps, B::VecOrMat{Tv}) where {Tv <: PardisoNumTypes}
     N = Int32(size(B, 1))
     NRHS = Int32(size(B, 2))
     ERR = Int32[0]

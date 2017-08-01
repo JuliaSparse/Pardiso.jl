@@ -5,3 +5,4 @@
 /deps/*.dll
 /deps/*.exp
 /deps/*.lib
+/deps/*.dylib

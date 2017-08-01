@@ -1,21 +1,15 @@
+__precompile__()
+
 module Pardiso
 
 if !isfile(joinpath(dirname(@__FILE__), "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
 end
 
+using Base.LinAlg
 using Compat
 
-import Compat.String
-
-if VERSION < v"0.5.0-dev+2915"
-    import Compat.issymmetric
-else
-    import Base.issymmetric
-end
-
-using Base.LinAlg
-
+import Base.issymmetric
 import Base.show
 
 export PardisoSolver, MKLPardisoSolver
@@ -32,20 +26,20 @@ macro R_str(s)
     s
 end
 
-type PardisoException <: Exception
+struct PardisoException <: Exception
     info::String
 end
 
-type PardisoPosDefException <: Exception
+struct PardisoPosDefException <: Exception
     info::String
 end
 
-Base.showerror(io::IO, e::Union{PardisoException, PardisoPosDefException}) = print(io, e.info);
+Base.showerror(io::IO, e::Union{PardisoException,PardisoPosDefException}) = print(io, e.info);
 
 
-const PardisoNumTypes = Union{Float64, Complex128}
+const PardisoNumTypes = Union{Float64,Complex128}
 
-@compat abstract type AbstractPardisoSolver end
+abstract type AbstractPardisoSolver end
 
 function __init__()
     # Global variables used here are defined in the created deps.jl file in the deps folder
@@ -54,21 +48,20 @@ function __init__()
                     """Please see the installation instructions and rerun Pkg.build("Pardiso")."""))
     end
 
-
-   if MKL_PARDISO_LIB_FOUND
+    # This loading is a bit of a mess
+    if MKL_PARDISO_LIB_FOUND
         try
-            @static if is_windows() begin
+            if Compat.Sys.iswindows()
                 global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
+            elseif Compat.Sys.isapple()
+                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
+            end
+            if Compat.Sys.iswindows() || Compat.Sys.isapple()
                 global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
                 global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
                 global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
                 global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
-            end
-            end
-
-            # Using the libmkl_rt on Ubuntu hung my computer
-            @static if is_unix() begin
-                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            else
                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
                 global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
                 global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
@@ -77,9 +70,8 @@ function __init__()
                 global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
                 global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
             end
-            end
+    
             global const MKL_PARDISO_LOADED = true
-
         catch e
             warn("MKL Pardiso did not manage to load, error thrown was: $e")
             global const MKL_PARDISO_LOADED = false
@@ -102,16 +94,13 @@ function __init__()
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
-            @static if is_unix() begin
-                if !isdefined(Pardiso, :libgomp)
-                    global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-                end
+            if Compat.Sys.isunix()
+                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 if !MKL_PARDISO_LOADED
                     global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
                     global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
                 global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-            end
             end
             global const PARDISO_LOADED = true
         catch e
@@ -147,7 +136,7 @@ get_maxfct(ps::AbstractPardisoSolver) = ps.maxfct
 set_maxfct!(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
 
 get_perm(ps::AbstractPardisoSolver) = ps.perm
-set_perm!{T <: Integer}(ps::AbstractPardisoSolver, perm::Vector{T}) = ps.perm = convert(Vector{Int32}, perm)
+set_perm!(ps::AbstractPardisoSolver, perm::Vector{T}) where {T <: Integer} = ps.perm = convert(Vector{Int32}, perm)
 
 get_phase(ps::AbstractPardisoSolver) = ps.phase
 
@@ -169,16 +158,16 @@ function pardisoinit(ps::AbstractPardisoSolver)
 end
 
 
-function solve{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                                       B::VecOrMat{Tv}, T::Symbol=:N)
+function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
+               B::VecOrMat{Tv}, T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
   X = copy(B)
   solve!(ps, X, A, B, T)
   return X
 end
 
-function solve!{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
-                                        A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv},
-                                        T::Symbol=:N)
+function solve!(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
+                A::SparseMatrixCSC{Tv,Ti}, B::VecOrMat{Tv},
+                T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
 
     pardisoinit(ps)
 
@@ -221,7 +210,7 @@ function solve!{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMa
             end
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)
-            eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF )
+            eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF)
             pardiso(ps, X, get_matrix(ps, A, T), B)
         end
     elseif issymmetric(A)
@@ -241,8 +230,8 @@ function solve!{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMa
     return X
 end
 
-function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv, Ti},
-                                            B::VecOrMat{Tv})
+function pardiso(ps::AbstractPardisoSolver, X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},
+                 B::VecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     if length(X) != 0
         dim_check(X, A, B)
     end
@@ -263,13 +252,15 @@ function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, X::VecOrM
     IA = convert(Vector{Int32}, A.colptr)
     JA = convert(Vector{Int32}, A.rowval)
 
+    resize!(ps.perm, size(B, 1))
+
     NRHS = Int32(size(B, 2))
 
     ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 end
 
 pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, 0, Float64[], Int32[], Int32[], 0, Float64[], Float64[])
-function pardiso{Ti, Tv <: PardisoNumTypes}(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv, Ti}, B::VecOrMat{Tv})
+function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::VecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     pardiso(ps, Tv[], A, B)
 end
 
