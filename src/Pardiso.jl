@@ -62,6 +62,7 @@ function __init__()
                 global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
                 global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             else
+                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
                 global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
                 global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
