@@ -54,7 +54,7 @@ function __init__()
             if Compat.Sys.iswindows()
                 global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
             elseif Compat.Sys.isapple()
-                 global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
+                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
             end
             if Compat.Sys.iswindows() || Compat.Sys.isapple()
                 global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
@@ -71,7 +71,7 @@ function __init__()
                 global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
                 global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
             end
-    
+
             global const MKL_PARDISO_LOADED = true
         catch e
             warn("MKL Pardiso did not manage to load, error thrown was: $e")
@@ -93,15 +93,18 @@ function __init__()
             global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
+            if Compat.Sys.islinux()
+                global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            end
+
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
             if Compat.Sys.isunix()
-                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 if !MKL_PARDISO_LOADED
                     global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
                     global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
-                global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
             end
             global const PARDISO_LOADED = true
         catch e

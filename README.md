@@ -20,13 +20,27 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 
 #### UNIX / macOS
 
-Note: Support for macOS is experimental, help to make it stable is appreciated.
-
 * Put the PARDISO library `libpardiso500-GNUXXX-X86-64.so` or `libpardiso500-MACOS-X86-64.dylib` in the `deps` folder located in `~/.julia/v0.x/Pardiso`.
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
 * Make sure OpenMP is installed.
 * Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
 * Run `Pkg.build("Pardiso")`
+
+##### Special macOS instructions
+
+For macOS the following (exact) paths need to exist:
+
+* `/usr/local/lib/libgfortran.3.dylib`
+* `/usr/local/lib/libgomp.1.dylib`
+* `/usr/local/lib/libquadmath.0.dylib`
+
+If these do not exist, you can create symlinks from the current location of the libraries.
+If you are using homebrew, these libraries exist in the gcc installation at e.g. `/usr/local/Cellar/gcc/7.2.0/lib/gcc/7`.
+Creating a symlink would then look like:
+
+```
+ln -s /usr/local/Cellar/gcc/7.2.0/lib/gcc/7/libgfortran.dylib /usr/local/lib/libgfortran.3.dylib
+```
 
 ## Basic Usage
 
@@ -102,7 +116,7 @@ After using functionality in this section, calls should no longer be made to the
 pardiso(ps, X, A, B)
 ```
 
-This will ensure that the properties you set will not be overwritten. 
+This will ensure that the properties you set will not be overwritten.
 
 If you want, you can use `get_matrix(ps, A, T)` to return a matrix that is suitable to use with `pardiso` depending on the matrix type that `ps` has set. The parameter `T` is a symbol representing if you will solve the normal, transposed or conjugated system. These are represented by `:N, :T, :C)` respectively.
 

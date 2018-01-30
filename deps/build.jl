@@ -13,7 +13,7 @@ const LIBPARDISONAMES = [
 ]
 
 const PATH_PREFIXES = [
-    dirname(@__FILE__),
+   @__DIR__,
     ""
 ]
 
