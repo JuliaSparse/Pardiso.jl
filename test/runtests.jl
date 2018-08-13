@@ -1,14 +1,15 @@
 ENV["OMP_NUM_THREADS"] = 2
 
-using Base.Test
+using Test
 using Pardiso
+using Random
 
-srand(1234)
+Random.seed!(1234)
 
 psolvers = DataType[]
 
-Pardiso.MKL_PARDISO_LOADED && push!(psolvers, MKLPardisoSolver)
-Pardiso.PARDISO_LOADED && push!(psolvers, PardisoSolver)
+Pardiso.MKL_PARDISO_LOADED[] && push!(psolvers, MKLPardisoSolver)
+Pardiso.PARDISO_LOADED[]     && push!(psolvers, PardisoSolver)
 
 println("Testing ", psolvers)
 
@@ -19,7 +20,7 @@ end
 # Test solver + for real and complex data
 @testset "solving" begin
 for pardiso_type in psolvers
-    for T in (Float64, Complex128)
+    for T in (Float64, ComplexF64)
         ps = pardiso_type()
         pardisoinit(ps)
 
@@ -34,7 +35,7 @@ for pardiso_type in psolvers
         X = similar(B)
 
         # Test unsymmetric, herm indef, herm posdef and symmetric
-        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, A1 + A1.']
+        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, copy(transpose(A1 + A1))]
 
             solve!(ps, X, A, B)
             @test X ≈ A\B
@@ -49,10 +50,10 @@ for pardiso_type in psolvers
             @test X ≈ A'\B
 
             solve!(ps, X, A, B, :T)
-            @test X ≈ A.'\B
+            @test X ≈ transpose(A)\B
 
             X = solve(ps, A, B, :T)
-            @test X ≈ A.'\B
+            @test X ≈ transpose(A)\B
         end
     end
 end

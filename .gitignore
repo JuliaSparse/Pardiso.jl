@@ -6,3 +6,4 @@
 /deps/*.exp
 /deps/*.lib
 /deps/*.dylib
+/deps/build.log

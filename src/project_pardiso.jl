@@ -12,7 +12,7 @@ mutable struct PardisoSolver <: AbstractPardisoSolver
 end
 
 function PardisoSolver()
-    if !PARDISO_LOADED
+    if !PARDISO_LOADED[]
       error("pardiso library was not loaded")
     end
 
@@ -85,26 +85,26 @@ function get_matrix(ps::PardisoSolver, A, T)
 end
 
 @inline function ccall_pardisoinit(ps::PardisoSolver)
-   ERR = Ref{Int32}(0)
-    ccall(init, Void,
+    ERR = Ref{Int32}(0)
+    ccall(init[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Float64}, Ptr{Int32}),
-          ps.pt, &ps.mtype, &ps.solver, ps.iparm, ps.dparm, ERR)
-    check_error(ps, ERR[])
+          ps.pt, Ref(Int32(ps.mtype)), Ref(Int32(ps.solver)), ps.iparm, ps.dparm, ERR)
+     check_error(ps, ERR[])
 end
 
 
 @inline function ccall_pardiso(ps::PardisoSolver, N, AA::Vector{Tv},
                                    IA, JA, NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
-    ccall(pardiso_f, Void,
+    ccall(pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
-          ps.pt, &ps.maxfct, &ps.mnum, &ps.mtype, &ps.phase,
-          &N, AA, IA, JA, ps.perm,
-          &NRHS, ps.iparm, &ps.msglvl, B, X,
+          ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)), Ref(ps.phase),
+          Ref(N), AA, IA, JA, ps.perm,
+          Ref(NRHS), ps.iparm, Ref(ps.msglvl), B, X,
           ERR, ps.dparm)
     check_error(ps, ERR[])
 end
@@ -121,15 +121,15 @@ function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
     NRHS = Int32(size(B, 2))
     ERR = Ref{Int32}(0)
     if Tv <: Complex
-        f = pardiso_printstats_z
-      else
-        f = pardiso_printstats
+        f = pardiso_printstats_z[]
+    else
+        f = pardiso_printstats[]
     end
-    ccall(f, Void,
+    ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
            Ptr{Int32}),
-          &ps.mtype, &N, AA, IA, JA, &NRHS, B, ERR)
+          Ref(ps.mtype), Ref(N), AA, IA, JA, Ref(NRHS), B, ERR)
 
     check_error(ps, ERR[])
     return
@@ -143,15 +143,15 @@ function checkmatrix(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti}) where {Ti,Tv
     ERR = Ref{Int32}(0)
 
     if Tv <: Complex
-        f = pardiso_chkmatrix_z
+        f = pardiso_chkmatrix_z[]
     else
-        f = pardiso_chkmatrix
+        f = pardiso_chkmatrix[]
     end
 
-    ccall(f, Void,
+    ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}),
-          &ps.mtype, &N, AA, IA,
+          Ref(ps.mtype), Ref(N), AA, IA,
           JA, ERR)
 
     check_error(ps, ERR[])
@@ -168,9 +168,9 @@ function checkvec(ps, B::VecOrMat{Tv}) where {Tv <: PardisoNumTypes}
     else
         f = pardiso_chkvec
     end
-    ccall(f, Void,
+    ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
-          &N, &NRHS, B, ERR)
+          Ref(N), Ref(NRHS), B, ERR)
 
     check_error(ps, ERR[])
     return

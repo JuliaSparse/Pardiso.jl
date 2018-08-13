@@ -12,9 +12,9 @@
 )
 
 Base.isreal(v::MatrixType) = v in (REAL_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, REAL_NONSYM)
-issymmetric(v::MatrixType) = v in (REAL_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, COMPLEX_STRUCT_SYM,
+LinearAlgebra.issymmetric(v::MatrixType) = v in (REAL_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, COMPLEX_STRUCT_SYM,
                                         COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF, COMPLEX_SYM)
-Base.ishermitian(v::MatrixType) = v in (REAL_SYM_POSDEF, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF)
+LinearAlgebra.ishermitian(v::MatrixType) = v in (REAL_SYM_POSDEF, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF)
 isposornegdef(v::MatrixType) = v in (REAL_SYM_POSDEF, REAL_SYM_INDEF, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF)
 
 const MATRIX_STRING = Dict{MatrixType, String}(

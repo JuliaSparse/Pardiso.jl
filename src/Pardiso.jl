@@ -6,10 +6,10 @@ if !isfile(joinpath(dirname(@__FILE__), "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
 end
 
-using Base.LinAlg
-using Compat
-
-import Base.issymmetric
+using Libdl
+using SparseArrays
+import LinearAlgebra
+import LinearAlgebra: issymmetric, ishermitian
 import Base.show
 
 export PardisoSolver, MKLPardisoSolver
@@ -22,10 +22,6 @@ export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 export get_matrix
 
-macro R_str(s)
-    s
-end
-
 struct PardisoException <: Exception
     info::String
 end
@@ -37,84 +33,94 @@ end
 Base.showerror(io::IO, e::Union{PardisoException,PardisoPosDefException}) = print(io, e.info);
 
 
-const PardisoNumTypes = Union{Float64,Complex128}
+const PardisoNumTypes = Union{Float64,ComplexF64}
 
 abstract type AbstractPardisoSolver end
+
+# MKL
+const mkl_init = Ref{Ptr}()
+const mkl_pardiso_f = Ref{Ptr}()
+const set_nthreads = Ref{Ptr}()
+const get_nthreads = Ref{Ptr}()
+const MKL_PARDISO_LOADED = Ref(false)
+
+# Pardiso
+const init = Ref{Ptr}()
+const pardiso_f = Ref{Ptr}()
+const pardiso_chkmatrix = Ref{Ptr}()
+const pardiso_chkmatrix_z = Ref{Ptr}()
+const pardiso_printstats = Ref{Ptr}()
+const pardiso_printstats_z = Ref{Ptr}()
+const pardiso_chkvec = Ref{Ptr}()
+const pardiso_chkvec_z = Ref{Ptr}()
+const PARDISO_LOADED = Ref(false)
 
 function __init__()
     # Global variables used here are defined in the created deps.jl file in the deps folder
     if !(MKL_PARDISO_LIB_FOUND || PARDISO_LIB_FOUND)
-        warn(string("""No Pardiso library found when Pkg.build("Pardiso") ran, this package will not currently be usable. """,
-                    """Please see the installation instructions and rerun Pkg.build("Pardiso")."""))
+        @warn "No Pardiso library found when Pkg.build(\"Pardiso\") ran, this package will not currently be usable. " *
+              "See the installation instructions and rerun Pkg.build(\"Pardiso\")."
     end
 
     # This loading is a bit of a mess
     if MKL_PARDISO_LIB_FOUND
         try
-            if Compat.Sys.iswindows()
-                global const libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
-            elseif Compat.Sys.isapple()
-                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
-            end
-            if Compat.Sys.iswindows() || Compat.Sys.isapple()
-                global const mkl_init = Libdl.dlsym(libmkl_core, "pardisoinit")
-                global const mkl_pardiso_f = Libdl.dlsym(libmkl_core, "pardiso")
-                global const set_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
-                global const get_nthreads = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
+            if Sys.iswindows() || Sys.isapple()
+                if Sys.iswindows()
+                    libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
+                else
+                    libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
+                end
+                mkl_init[] = Libdl.dlsym(libmkl_core, "pardisoinit")
+                mkl_pardiso_f[] = Libdl.dlsym(libmkl_core, "pardiso")
+                set_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
+                get_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             else
-                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
-                global const libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
-                global const libmkl_threaded = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-                global const libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
-                global const mkl_init = Libdl.dlsym(libmkl_gd, "pardisoinit")
-                global const mkl_pardiso_f = Libdl.dlsym(libmkl_gd, "pardiso")
-                global const set_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
-                global const get_nthreads = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
+                Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+                Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
+                Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
+                Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
+                mkl_init[] = Libdl.dlsym(libmkl_gd, "pardisoinit")
+                mkl_pardiso_f[] = Libdl.dlsym(libmkl_gd, "pardiso")
+                set_nthreads[] = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
+                get_nthreads[] = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
             end
-
-            global const MKL_PARDISO_LOADED = true
+            MKL_PARDISO_LOADED[] = true
         catch e
-            warn("MKL Pardiso did not manage to load, error thrown was: $e")
-            global const MKL_PARDISO_LOADED = false
+            @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
         end
-    else
-        global const MKL_PARDISO_LOADED = false
     end
 
     if PARDISO_LIB_FOUND
         try
-            global const libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
-            global const init = Libdl.dlsym(libpardiso, "pardisoinit")
-            global const pardiso_f = Libdl.dlsym(libpardiso, "pardiso")
-            global const pardiso_chkmatrix = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
-            global const pardiso_chkmatrix_z = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
-            global const pardiso_printstats = Libdl.dlsym(libpardiso, "pardiso_printstats")
-            global const pardiso_printstats_z = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
-            global const pardiso_chkvec = Libdl.dlsym(libpardiso, "pardiso_chkvec")
-            global const pardiso_chkvec_z = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+            libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
+            init[] = Libdl.dlsym(libpardiso, "pardisoinit")
+            pardiso_f[] = Libdl.dlsym(libpardiso, "pardiso")
+            pardiso_chkmatrix[] = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
+            pardiso_chkmatrix_z[] = Libdl.dlsym(libpardiso, "pardiso_chkmatrix_z")
+            pardiso_printstats[] = Libdl.dlsym(libpardiso, "pardiso_printstats")
+            pardiso_printstats_z[] = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
+            pardiso_chkvec[] = Libdl.dlsym(libpardiso, "pardiso_chkvec")
+            pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
-            if Compat.Sys.islinux()
-                global const libgfortran = Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-                global const libgomp = Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            if Sys.islinux()
+                Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
+                Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
             end
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
-            if Compat.Sys.isunix()
-                if !MKL_PARDISO_LOADED
-                    global const libblas = Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-                    global const liblapack = Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
+            if Sys.isunix()
+                if !MKL_PARDISO_LOADED[]
+                    Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
+                    Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
             end
-            global const PARDISO_LOADED = true
+            PARDISO_LOADED[] = true
         catch e
-            warn("Pardiso did not manage to load, error thrown was: $e")
-            global const PARDISO_LOADED = false
+            @error("Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
         end
-    else
-        global const PARDISO_LOADED = false
     end
-
 end
 
 include("../deps/deps.jl")
@@ -207,7 +213,7 @@ function solve!(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
                    pardiso(ps, X, get_matrix(ps, A, T), B)
             else
                 # Workaround for #3
-                if eltype(A) == Complex128
+                if eltype(A) == ComplexF64
                     throw(PardisoPosDefException(""))
                 end
                 pardiso(ps, X, get_matrix(ps, A, T), B)

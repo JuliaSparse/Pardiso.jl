@@ -1,9 +1,12 @@
-using Compat
-
 # remove deps.jl if it exists, in case build.jl fails
 isfile("deps.jl") && rm("deps.jl")
 
+using Libdl
+
 const LIBPARDISONAMES = [
+    "libpardiso600-WIN-X86-64.dll",
+    "libpardiso600-MACOS-X86-64.dylib",
+    "libpardiso600-GNU720-X86-64",
     "libpardiso500-WIN-X86-64.dll",
     "libpardiso500-MACOS-X86-64.dylib",
     "libpardiso500-GNU461-X86-64",
@@ -18,7 +21,7 @@ const PATH_PREFIXES = [
 ]
 
 # print to stderr, since that is where Pkg prints its messages
-eprintln(x...) = println(STDERR, x...)
+eprintln(x...) = println(stderr, x...)
 
 function find_paradisolib()
     found_lib = false
@@ -34,7 +37,7 @@ function find_paradisolib()
             catch e
                 if isfile(path)
                     eprintln("found library but it failed to load due to:")
-                    Base.showerror(STDERR, e)
+                    Base.showerror(stderr, e)
                 end
             end
         end
@@ -56,7 +59,7 @@ pardisopath, found_pardisolib = find_paradisolib()
 mklroot, found_mklpardiso = find_mklparadiso()
 
 if !(found_mklpardiso || found_pardisolib)
-    warn("no Pardiso library managed to load")
+    @warn("no Pardiso library managed to load")
 end
 
 open("deps.jl", "w") do f
@@ -64,8 +67,8 @@ open("deps.jl", "w") do f
 """
 const MKL_PARDISO_LIB_FOUND = $found_mklpardiso
 const PARDISO_LIB_FOUND = $found_pardisolib
-const MKLROOT = R"$mklroot"
-const PARDISO_PATH = R"$pardisopath"
+const MKLROOT = raw"$mklroot"
+const PARDISO_PATH = raw"$pardisopath"
 """
 )
 
