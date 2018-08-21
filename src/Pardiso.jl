@@ -8,8 +8,7 @@ end
 
 using Libdl
 using SparseArrays
-import LinearAlgebra
-import LinearAlgebra: issymmetric, ishermitian
+using LinearAlgebra
 import Base.show
 
 export PardisoSolver, MKLPardisoSolver
@@ -56,6 +55,9 @@ const pardiso_chkvec_z = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
+    if !haskey(ENV, "PARDISOLICMESSAGE")
+        ENV["PARDISOLICMESSAGE"] = 1
+    end
     # Global variables used here are defined in the created deps.jl file in the deps folder
     if !(MKL_PARDISO_LIB_FOUND || PARDISO_LIB_FOUND)
         @warn "No Pardiso library found when Pkg.build(\"Pardiso\") ran, this package will not currently be usable. " *
@@ -116,6 +118,10 @@ function __init__()
                     Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
             end
+
+            if PARDISO_VERSION == 6
+                Libdl.dlopen("libgomp.dylib", Libdl.RTLD_GLOBAL)
+            end
             PARDISO_LOADED[] = true
         catch e
             @error("Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
@@ -129,7 +135,7 @@ include("project_pardiso.jl")
 include("mkl_pardiso.jl")
 
 # Getters and setters
-set_matrixtype!(ps::AbstractPardisoSolver, v::Int) = set_matrixtype!(ps, MatrixType[v][1])
+set_matrixtype!(ps::AbstractPardisoSolver, v::Int) = set_matrixtype!(ps, MatrixType(v))
 function set_matrixtype!(ps::AbstractPardisoSolver, v::MatrixType)
     ps.mtype = v
 end
@@ -150,14 +156,14 @@ set_perm!(ps::AbstractPardisoSolver, perm::Vector{T}) where {T <: Integer} = ps.
 
 get_phase(ps::AbstractPardisoSolver) = ps.phase
 
-set_phase!(ps::AbstractPardisoSolver, v::Int) = set_phase!(ps, Phase[v][1])
+set_phase!(ps::AbstractPardisoSolver, v::Int) = set_phase!(ps, Phase(v))
 function set_phase!(ps::AbstractPardisoSolver, v::Phase)
     ps.phase = v
 end
 
 get_msglvl(ps::AbstractPardisoSolver) = ps.msglvl
 
-set_msglvl!(ps::AbstractPardisoSolver, v::Integer) = set_msglvl!(ps, MessageLevel[v][1])
+set_msglvl!(ps::AbstractPardisoSolver, v::Integer) = set_msglvl!(ps, MessageLevel(v))
 function set_msglvl!(ps::AbstractPardisoSolver, v::MessageLevel)
     ps.msglvl = v
 end

@@ -3,6 +3,7 @@ ENV["OMP_NUM_THREADS"] = 2
 using Test
 using Pardiso
 using Random
+using SparseArrays
 
 Random.seed!(1234)
 
@@ -36,7 +37,6 @@ for pardiso_type in psolvers
 
         # Test unsymmetric, herm indef, herm posdef and symmetric
         for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, copy(transpose(A1 + A1))]
-
             solve!(ps, X, A, B)
             @test X ≈ A\B
 
@@ -50,10 +50,10 @@ for pardiso_type in psolvers
             @test X ≈ A'\B
 
             solve!(ps, X, A, B, :T)
-            @test X ≈ transpose(A)\B
+            @test X ≈ copy(transpose(A))\B
 
             X = solve(ps, A, B, :T)
-            @test X ≈ transpose(A)\B
+            @test X ≈ copy(transpose(A))\B
         end
     end
 end
@@ -68,7 +68,7 @@ for pardiso_type in psolvers
     B = rand(10, 2)
     X = rand(10, 2)
 
-    if typeof(pardiso_type) == PardisoSolver
+    if pardiso_type == PardisoSolver
         printstats(ps, A, B)
         checkmatrix(ps, A)
         checkvec(ps, B)
@@ -101,14 +101,14 @@ for pardiso_type in psolvers
     @test_throws ArgumentError set_msglvl!(ps, 2)
     @test_throws ArgumentError set_matrixtype!(ps, 15)
 
-    if typeof(pardiso_type) == PardisoSolver
-        @test_throws ArgumentError set_solver(ps, 2)
+    if pardiso_type == PardisoSolver
+        @test_throws ArgumentError set_solver!(ps, 2)
 
-        set_dparm(ps, 5, 13.37)
+        set_dparm!(ps, 5, 13.37)
         @test get_dparm(ps, 5) == 13.37
 
-        set_solver(ps, 1)
-        @test get_solver(ps) == 1
+        set_solver!(ps, 1)
+        @test Int(get_solver(ps)) == 1
     end
 
     set_iparm!(ps, 13, 100)

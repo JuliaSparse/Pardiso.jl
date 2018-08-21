@@ -67,7 +67,7 @@ function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Ref{Int32}(0)
     ccall(mkl_init[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
-          ps.pt, Ref(ps.mtype), ps.iparm)
+          ps.pt, Ref(Int32(ps.mtype)), ps.iparm)
     check_error(ps, ERR[])
 end
 
@@ -80,9 +80,9 @@ function ccall_pardiso(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}),
-          ps.pt, Ref(ps.maxfct), Ref(ps.mnum), Ref(ps.mtype), Ref(ps.phase),
+          ps.pt, Ref(ps.maxfct), Ref(ps.mnum), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
           Ref(N), AA, IA, JA, ps.perm,
-          Ref(NRHS), ps.iparm, Ref(ps.msglvl), B, X,
+          Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
           ERR)
     check_error(ps, ERR[])
 end

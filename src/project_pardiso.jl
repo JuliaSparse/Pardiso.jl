@@ -56,7 +56,7 @@ get_dparms(ps::PardisoSolver) = ps.dparm
 set_dparm!(ps::PardisoSolver, i::Integer, v::AbstractFloat) = ps.dparm[i] = v
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
 
-set_solver!(ps::PardisoSolver, v::Int) = set_solver!(ps, Solver[v][1])
+set_solver!(ps::PardisoSolver, v::Int) = set_solver!(ps, Solver(v))
 function set_solver!(ps::PardisoSolver, v::Solver)
     ps.solver = v
 end
@@ -102,9 +102,9 @@ end
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
-          ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)), Ref(ps.phase),
+          ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
           Ref(N), AA, IA, JA, ps.perm,
-          Ref(NRHS), ps.iparm, Ref(ps.msglvl), B, X,
+          Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
           ERR, ps.dparm)
     check_error(ps, ERR[])
 end
@@ -129,7 +129,7 @@ function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
            Ptr{Int32}),
-          Ref(ps.mtype), Ref(N), AA, IA, JA, Ref(NRHS), B, ERR)
+          Ref(Int32(ps.mtype)), Ref(N), AA, IA, JA, Ref(NRHS), B, ERR)
 
     check_error(ps, ERR[])
     return
@@ -151,7 +151,7 @@ function checkmatrix(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti}) where {Ti,Tv
     ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}),
-          Ref(ps.mtype), Ref(N), AA, IA,
+          Ref(Int32(ps.mtype)), Ref(N), AA, IA,
           JA, ERR)
 
     check_error(ps, ERR[])
@@ -164,9 +164,9 @@ function checkvec(ps, B::VecOrMat{Tv}) where {Tv <: PardisoNumTypes}
     ERR = Int32[0]
 
     if Tv <: Complex
-        f = pardiso_chkvec_z
+        f = pardiso_chkvec_z[]
     else
-        f = pardiso_chkvec
+        f = pardiso_chkvec[]
     end
     ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),

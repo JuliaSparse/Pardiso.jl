@@ -12,7 +12,6 @@ const LIBPARDISONAMES = [
     "libpardiso500-GNU461-X86-64",
     "libpardiso500-GNU472-X86-64",
     "libpardiso500-GNU481-X86-64",
-    "libpardiso"
 ]
 
 const PATH_PREFIXES = [
@@ -23,6 +22,7 @@ const PATH_PREFIXES = [
 # print to stderr, since that is where Pkg prints its messages
 eprintln(x...) = println(stderr, x...)
 
+pardiso_version = 0
 function find_paradisolib()
     found_lib = false
     for prefix in PATH_PREFIXES
@@ -33,6 +33,11 @@ function find_paradisolib()
                 Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
                 global PARDISO_LIB_FOUND = true
                 eprintln("found libpardiso at $path, using it")
+                if occursin("600", libname)
+                    global pardiso_version = 6
+                else
+                    global pardiso_version = 5
+                end
                 return path, true
             catch e
                 if isfile(path)
@@ -67,7 +72,8 @@ open("deps.jl", "w") do f
 """
 const MKL_PARDISO_LIB_FOUND = $found_mklpardiso
 const PARDISO_LIB_FOUND = $found_pardisolib
-const MKLROOT = raw"$mklroot"
+const PARDISO_VERSION = $pardiso_version
+const MKLROOT = $(repr(mklroot))
 const PARDISO_PATH = raw"$pardisopath"
 """
 )
