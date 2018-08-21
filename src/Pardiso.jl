@@ -36,6 +36,39 @@ const PardisoNumTypes = Union{Float64,ComplexF64}
 
 abstract type AbstractPardisoSolver end
 
+function collect_gfortran_lib_candidates(main_ver)
+    candidates = String[]
+    if Sys.isapple()
+        homebrew_gcc = "/usr/local/Cellar/gcc/"
+        isdir(homebrew_gcc) || return String[]
+        vers = readdir(homebrew_gcc)
+        filter!(x -> startswith(x, "$main_ver."), vers)
+        for v in vers
+            push!(candidates, joinpath(homebrew_gcc, v, "lib/gcc/$main_ver/"))
+        end
+    elseif Sys.islinux()
+        gcc_path = "/usr/lib/gcc/x86_64-linux-gnu/"
+        isdir(gcc_path) || return String[]
+        vers = readdir(gcc_path)
+        filter!(x -> startswith(x, "$main_ver."), vers)
+        for v in vers
+            push!(candidates, joinpath(gcc_path, v))
+        end
+    end
+    return candidates
+end
+
+load_lib_fortran(lib::String, v::Int) = load_lib_fortran(lib, [v])
+function load_lib_fortran(lib::String, vs::Vector{Int})
+    candidates = String[]
+    for v in vs
+        append!(candidates, collect_gfortran_lib_candidates(v))
+    end
+    path = Libdl.find_library(lib, candidates)
+    isempty(path) && (path = lib)
+    Libdl.dlopen(path * "." * Libdl.dlext, Libdl.RTLD_GLOBAL)
+end
+
 # MKL
 const mkl_init = Ref{Ptr}()
 const mkl_pardiso_f = Ref{Ptr}()
@@ -78,6 +111,7 @@ function __init__()
                 set_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
                 get_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             else
+                load_lib_fortran("libgomp", [7, 8])
                 Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
                 Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
@@ -105,9 +139,11 @@ function __init__()
             pardiso_chkvec[] = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
-            if Sys.islinux()
-                Libdl.dlopen("libgfortran", Libdl.RTLD_GLOBAL)
-                Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
+            if Sys.islinux() || PARDISO_VERSION ==6
+                gfortran_v = PARDISO_VERSION == 6 ? 8 : 7
+                for lib in ("libgfortran", "libgomp")
+                    load_lib_fortran(lib, gfortran_v)
+                end
             end
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
@@ -117,10 +153,6 @@ function __init__()
                     Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
                     Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
                 end
-            end
-
-            if PARDISO_VERSION == 6
-                Libdl.dlopen("libgomp.dylib", Libdl.RTLD_GLOBAL)
             end
             PARDISO_LOADED[] = true
         catch e

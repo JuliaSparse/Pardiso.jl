@@ -16,7 +16,6 @@ const LIBPARDISONAMES = [
 
 const PATH_PREFIXES = [
    @__DIR__,
-    ""
 ]
 
 # print to stderr, since that is where Pkg prints its messages
@@ -32,7 +31,7 @@ function find_paradisolib()
                 path = joinpath(prefix, libname)
                 Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
                 global PARDISO_LIB_FOUND = true
-                eprintln("found libpardiso at $path, using it")
+                eprintln("found libpardiso at $(abspath(path)), using it")
                 if occursin("600", libname)
                     global pardiso_version = 6
                 else
@@ -47,7 +46,7 @@ function find_paradisolib()
             end
         end
     end
-    eprintln("did not find libpardiso, assuming PARDISO 5.0 is not installed")
+    eprintln("did not find libpardiso, assuming PARDISO 5/6 is not installed")
     return "", false
 end
 

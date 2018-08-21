@@ -17,14 +17,11 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 * Perform the platform specific steps below
 * Run `Pkg.build("Pardiso")`
 
-#### Linux specific
-
-* Make sure OpenMP is installed.
-* Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
-
 ##### Linux / macOS specific
 
-* Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
+* Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
+* Make sure OpenMP is installed.
+* Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself), using for example [OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/Precompiled-installation-packages)
 
 ##### Special macOS instructions for Pardiso version 5.0
 
@@ -40,15 +37,6 @@ Creating a symlink would then look like:
 
 ```
 ln -s /usr/local/Cellar/gcc/7.2.0/lib/gcc/7/libgfortran.dylib /usr/local/lib/libgfortran.3.dylib
-```
-
-##### Special macOS instructions for Pardiso version 6.0
-
-Pardiso version 6.0 is build with gfortran 8 and the library `libgomp.dylib` corresponding to that
-compiler needs to be able to be opened. Using homebrew this can be done like:
-
-```
-ln -s /usr/local/Cellar/gcc/8.1.0/lib/gcc/8/libgomp.dylib /usr/local/lib/libgomp.dylib
 ```
 
 ## Basic Usage
