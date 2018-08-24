@@ -307,7 +307,7 @@ function pardiso(ps::AbstractPardisoSolver, X::VecOrMat{Tv}, A::SparseMatrixCSC{
     ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
 end
 
-pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, 0, Float64[], Int32[], Int32[], 0, Float64[], Float64[])
+pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, Int32(0), Float64[], Int32[], Int32[], Int32(0), Float64[], Float64[])
 function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::VecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     pardiso(ps, Tv[], A, B)
 end

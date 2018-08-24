@@ -94,8 +94,8 @@ end
 end
 
 
-@inline function ccall_pardiso(ps::PardisoSolver, N, AA::Vector{Tv},
-                                   IA, JA, NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
+@inline function ccall_pardiso(ps::PardisoSolver, N::Int32, AA::Vector{Tv},
+                                   IA, JA, NRHS::Int32, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
     ccall(pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
