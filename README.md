@@ -8,14 +8,17 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 
 ### MKL PARDISO
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly.
+* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly, typically done by executing something like `source /opt/intel/bin/compilervars.sh intel64`.
 * Run `Pkg.build("Pardiso")`
+* Run `Pardiso.show_build_log()` to see the build log for additional information.
 
 ### PARDISO
 
-* Put the PARDISO library `libpardisoX00-WIN-X86-64.dll`, `libpardisoX00-GNUXXX-X86-64.so` or `libpardisoX00-MACOS-X86-64.dylib`  in the `deps` folder.
+* Put the PARDISO library `libpardisoX00-WIN-X86-64.dll`, `libpardisoX00-GNUXXX-X86-64.so` or `libpardisoX00-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
+  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the `.julia/config/startup.jl` file and download the Pardiso library to that folder.
 * Perform the platform specific steps below
 * Run `Pkg.build("Pardiso")`
+* Run `Pardiso.show_build_log()` to see the build log for additional information.
 
 ##### Linux / macOS specific
 
