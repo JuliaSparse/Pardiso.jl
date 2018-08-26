@@ -20,10 +20,10 @@ elseif Sys.isapple()
 ]
 elseif Sys.islinux()
 [
-    "libpardiso600-GNU720-X86-64",
-    "libpardiso500-GNU461-X86-64",
-    "libpardiso500-GNU472-X86-64",
-    "libpardiso500-GNU481-X86-64",
+    "libpardiso600-GNU720-X86-64.so",
+    "libpardiso500-GNU461-X86-64.so",
+    "libpardiso500-GNU472-X86-64.so",
+    "libpardiso500-GNU481-X86-64.so",
 ]
 else
     error("unhandled OS")
