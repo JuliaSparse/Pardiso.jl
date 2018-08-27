@@ -2,8 +2,17 @@ __precompile__()
 
 module Pardiso
 
-if !isfile(joinpath(dirname(@__FILE__), "..", "deps", "deps.jl"))
+if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
+end
+
+function show_build_log()
+    logfile = joinpath(@__DIR__, "..", "deps", "build.log")
+    if !isfile(logfile)
+        error("no log file found")
+    else
+        println(read(logfile, String))
+    end
 end
 
 using Libdl

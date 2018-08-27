@@ -1,5 +1,5 @@
 # Matrix type
-@enum(MatrixType,
+@enum(MatrixType::Int32,
     REAL_SYM            = 1,
     REAL_SYM_POSDEF     = 2,
     REAL_SYM_INDEF      = -2,
@@ -33,13 +33,13 @@ const REAL_MATRIX_TYPES = [REAL_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, REAL_NONSY
 const COMPLEX_MATRIX_TYPES = [COMPLEX_STRUCT_SYM, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF, COMPLEX_NONSYM]
 
 # Messages
-@enum(MessageLevel,
+@enum(MessageLevel::Int32,
     MESSAGE_LEVEL_OFF = 0,
     MESSAGE_LEVEL_ON = 1
 )
 
 # Solver
-@enum(Solver,
+@enum(Solver::Int32,
     DIRECT_SOLVER = 0,
     ITERATIVE_SOLVER = 1
 )
@@ -50,7 +50,7 @@ const SOLVER_STRING = Dict{Solver, String}(
 )
 
 # Phase
-@enum(Phase,
+@enum(Phase::Int32,
     ANALYSIS                             = 11,
     ANALYSIS_NUM_FACT                    = 12,
     ANALYSIS_NUM_FACT_SOLVE_REFINE       = 13,

@@ -27,8 +27,15 @@ function MKLPardisoSolver()
     maxfct = 1
     perm = Int32[]
 
-    MKLPardisoSolver(pt, iparm, mtype, solver,
+    ps = MKLPardisoSolver(pt, iparm, mtype, solver,
                       phase, msglvl, maxfct, mnum, perm)
+
+    finalizer(ps) do ps
+        set_phase!(ps, Pardiso.RELEASE_ALL)
+        pardiso(ps)
+    end
+
+    return ps
 end
 
 

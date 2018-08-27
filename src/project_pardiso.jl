@@ -34,8 +34,15 @@ function PardisoSolver()
     maxfct = 1
     perm = Int32[]
 
-    PardisoSolver(pt, iparm, dparm, mtype, solver,
+    ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
                   phase, msglvl, maxfct, mnum, perm)
+
+    finalizer(ps) do ps
+        set_phase!(ps, Pardiso.RELEASE_ALL)
+        pardiso(ps)
+    end
+
+    return ps
 end
 
 

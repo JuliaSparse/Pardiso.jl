@@ -36,7 +36,7 @@ for pardiso_type in psolvers
         X = similar(B)
 
         # Test unsymmetric, herm indef, herm posdef and symmetric
-        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, copy(transpose(A1 + A1))]
+        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, transpose(A1) + A1]
             solve!(ps, X, A, B)
             @test X ≈ A\B
 
@@ -123,4 +123,17 @@ for pardiso_type in psolvers
     set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
     @test get_msglvl(ps) == Pardiso.MESSAGE_LEVEL_ON
 end
+
+@testset "pardiso" begin
+    for pardiso_type in psolvers
+        A = sparse(rand(2,2) + im * rand(2,2))
+        b = rand(2)          + im * rand(2)
+        ps = pardiso_type()
+        set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM)
+        x = Pardiso.solve(ps, A, b);
+        set_phase!(ps, Pardiso.RELEASE_ALL)
+        pardiso(ps)
+    end
+end
+
 end # testset
