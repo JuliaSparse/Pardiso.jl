@@ -13,7 +13,7 @@ mutable struct MKLPardisoSolver <: AbstractPardisoSolver
 end
 
 function MKLPardisoSolver()
-    if !MKL_PARDISO_LOADED
+    if !MKL_PARDISO_LOADED[]
         error("mkl library was not loaded, unable to create solver")
     end
 
@@ -27,8 +27,15 @@ function MKLPardisoSolver()
     maxfct = 1
     perm = Int32[]
 
-    MKLPardisoSolver(pt, iparm, mtype, solver,
+    ps = MKLPardisoSolver(pt, iparm, mtype, solver,
                       phase, msglvl, maxfct, mnum, perm)
+
+    finalizer(ps) do ps
+        set_phase!(ps, Pardiso.RELEASE_ALL)
+        pardiso(ps)
+    end
+
+    return ps
 end
 
 
@@ -36,8 +43,8 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
                                   "\tMatrix type: $(MATRIX_STRING[get_matrixtype(ps)])\n",
                                   "\tPhase: $(PHASE_STRING[get_phase(ps)])"))
 
-set_nprocs!(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads, Void, (Ptr{Int32}, Ptr{Int32}), &(Int32(n)), &MKL_DOMAIN_PARDISO)
-get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads, Int32, (Ptr{Int32},), &MKL_DOMAIN_PARDISO)
+set_nprocs!(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads[], Cvoid, (Ptr{Int32}, Ptr{Int32}), Ref((Int32(n))), Ref(MKL_DOMAIN_PARDISO))
+get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads[], Int32, (Ptr{Int32},), Ref(MKL_DOMAIN_PARDISO))
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
@@ -65,9 +72,9 @@ end
 
 function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Ref{Int32}(0)
-    ccall(mkl_init, Void,
+    ccall(mkl_init[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
-          ps.pt, &ps.mtype, ps.iparm)
+          ps.pt, Ref(Int32(ps.mtype)), ps.iparm)
     check_error(ps, ERR[])
 end
 
@@ -75,14 +82,14 @@ end
 function ccall_pardiso(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
                        NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
-    ccall(mkl_pardiso_f, Void,
+    ccall(mkl_pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}),
-          ps.pt, &ps.maxfct, &ps.mnum, &ps.mtype, &ps.phase,
-          &N, AA, IA, JA, ps.perm,
-          &NRHS, ps.iparm, &ps.msglvl, B, X,
+          ps.pt, Ref(ps.maxfct), Ref(ps.mnum), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
+          Ref(N), AA, IA, JA, ps.perm,
+          Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
           ERR)
     check_error(ps, ERR[])
 end

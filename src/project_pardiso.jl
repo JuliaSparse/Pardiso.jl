@@ -12,7 +12,7 @@ mutable struct PardisoSolver <: AbstractPardisoSolver
 end
 
 function PardisoSolver()
-    if !PARDISO_LOADED
+    if !PARDISO_LOADED[]
       error("pardiso library was not loaded")
     end
 
@@ -34,8 +34,15 @@ function PardisoSolver()
     maxfct = 1
     perm = Int32[]
 
-    PardisoSolver(pt, iparm, dparm, mtype, solver,
+    ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
                   phase, msglvl, maxfct, mnum, perm)
+
+    finalizer(ps) do ps
+        set_phase!(ps, Pardiso.RELEASE_ALL)
+        pardiso(ps)
+    end
+
+    return ps
 end
 
 
@@ -56,7 +63,7 @@ get_dparms(ps::PardisoSolver) = ps.dparm
 set_dparm!(ps::PardisoSolver, i::Integer, v::AbstractFloat) = ps.dparm[i] = v
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
 
-set_solver!(ps::PardisoSolver, v::Int) = set_solver!(ps, Solver[v][1])
+set_solver!(ps::PardisoSolver, v::Int) = set_solver!(ps, Solver(v))
 function set_solver!(ps::PardisoSolver, v::Solver)
     ps.solver = v
 end
@@ -85,26 +92,26 @@ function get_matrix(ps::PardisoSolver, A, T)
 end
 
 @inline function ccall_pardisoinit(ps::PardisoSolver)
-   ERR = Ref{Int32}(0)
-    ccall(init, Void,
+    ERR = Ref{Int32}(0)
+    ccall(init[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Float64}, Ptr{Int32}),
-          ps.pt, &ps.mtype, &ps.solver, ps.iparm, ps.dparm, ERR)
-    check_error(ps, ERR[])
+          ps.pt, Ref(Int32(ps.mtype)), Ref(Int32(ps.solver)), ps.iparm, ps.dparm, ERR)
+     check_error(ps, ERR[])
 end
 
 
-@inline function ccall_pardiso(ps::PardisoSolver, N, AA::Vector{Tv},
-                                   IA, JA, NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
+@inline function ccall_pardiso(ps::PardisoSolver, N::Int32, AA::Vector{Tv},
+                                   IA, JA, NRHS::Int32, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
-    ccall(pardiso_f, Void,
+    ccall(pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
-          ps.pt, &ps.maxfct, &ps.mnum, &ps.mtype, &ps.phase,
-          &N, AA, IA, JA, ps.perm,
-          &NRHS, ps.iparm, &ps.msglvl, B, X,
+          ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
+          Ref(N), AA, IA, JA, ps.perm,
+          Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
           ERR, ps.dparm)
     check_error(ps, ERR[])
 end
@@ -121,15 +128,15 @@ function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
     NRHS = Int32(size(B, 2))
     ERR = Ref{Int32}(0)
     if Tv <: Complex
-        f = pardiso_printstats_z
-      else
-        f = pardiso_printstats
+        f = pardiso_printstats_z[]
+    else
+        f = pardiso_printstats[]
     end
-    ccall(f, Void,
+    ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
            Ptr{Int32}),
-          &ps.mtype, &N, AA, IA, JA, &NRHS, B, ERR)
+          Ref(Int32(ps.mtype)), Ref(N), AA, IA, JA, Ref(NRHS), B, ERR)
 
     check_error(ps, ERR[])
     return
@@ -143,15 +150,15 @@ function checkmatrix(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti}) where {Ti,Tv
     ERR = Ref{Int32}(0)
 
     if Tv <: Complex
-        f = pardiso_chkmatrix_z
+        f = pardiso_chkmatrix_z[]
     else
-        f = pardiso_chkmatrix
+        f = pardiso_chkmatrix[]
     end
 
-    ccall(f, Void,
+    ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}),
-          &ps.mtype, &N, AA, IA,
+          Ref(Int32(ps.mtype)), Ref(N), AA, IA,
           JA, ERR)
 
     check_error(ps, ERR[])
@@ -164,13 +171,13 @@ function checkvec(ps, B::VecOrMat{Tv}) where {Tv <: PardisoNumTypes}
     ERR = Int32[0]
 
     if Tv <: Complex
-        f = pardiso_chkvec_z
+        f = pardiso_chkvec_z[]
     else
-        f = pardiso_chkvec
+        f = pardiso_chkvec[]
     end
-    ccall(f, Void,
+    ccall(f, Cvoid,
           (Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Int32}),
-          &N, &NRHS, B, ERR)
+          Ref(N), Ref(NRHS), B, ERR)
 
     check_error(ps, ERR[])
     return

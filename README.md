@@ -8,27 +8,27 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 
 ### MKL PARDISO
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly.
+* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly, typically done by executing something like `source /opt/intel/bin/compilervars.sh intel64`.
 * Run `Pkg.build("Pardiso")`
+* Run `Pardiso.show_build_log()` to see the build log for additional information.
 
-### PARDISO 5.0
+### PARDISO
 
-#### Windows
-
-* Put the PARDISO library `libpardiso500-WIN-X86-64.dll` in the `deps` folder.
+* Put the PARDISO library `libpardisoX00-WIN-X86-64.dll`, `libpardisoX00-GNUXXX-X86-64.so` or `libpardisoX00-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
+  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the `.julia/config/startup.jl` file and download the Pardiso library to that folder.
+* Perform the platform specific steps below
 * Run `Pkg.build("Pardiso")`
+* Run `Pardiso.show_build_log()` to see the build log for additional information.
 
-#### UNIX / macOS
+##### Linux / macOS specific
 
-* Put the PARDISO library `libpardiso500-GNUXXX-X86-64.so` or `libpardiso500-MACOS-X86-64.dylib` in the `deps` folder located in `~/.julia/v0.x/Pardiso`.
-* Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself).
-* Make sure OpenMP is installed.
 * Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
-* Run `Pkg.build("Pardiso")`
+* Make sure OpenMP is installed.
+* Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself), using for example [OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/Precompiled-installation-packages)
 
-##### Special macOS instructions
+##### Special macOS instructions for Pardiso version 5.0
 
-For macOS the following (exact) paths need to exist:
+The following (exact) paths need to exist:
 
 * `/usr/local/lib/libgfortran.3.dylib`
 * `/usr/local/lib/libgomp.1.dylib`
@@ -44,11 +44,11 @@ ln -s /usr/local/Cellar/gcc/7.2.0/lib/gcc/7/libgfortran.dylib /usr/local/lib/lib
 
 ## Basic Usage
 
-This section will explain how to solve equations using `Pardiso.jl` with the default settings of the library. For more advanced usage there is a section further down.
+This section will explain how to solve equations using `Pardiso.jl` with the default settings of the library. For more advanced users there is a section further down.
 
 ## Creating the PardisoSolver
 
-A `PardisoSolver` is created with `PardisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or a `MKLPardisoSolver()` will be referred to as `ps`.
+A `PardisoSolver` is created with `PardisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
 
 ### Solving
 
@@ -59,7 +59,7 @@ Solving equations is done with the `solve` and `solve!` functions. They have the
 
 The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
 
-Here is an example of solving a system of real equations with two right hand sides:
+Here is an example of solving a system of real equations with two right-hand sides:
 
 ```jl
 ps = PardisoSolver()
@@ -89,7 +89,7 @@ julia> X
 
 ### Setting the number of threads
 
-The number of threads to use are set in different ways for MKL PARDISO and PARDISO 5.0.
+The number of threads to use is set in different ways for MKL PARDISO and PARDISO 5.0.
 
 #### MKL PARDISO
 
@@ -187,7 +187,7 @@ To set the default values of the `IPARM` and `DPARM` call `pardisoinit(ps)`. The
 
 ### Setting message level
 
-It is possible for Pardiso to print out timings and statistics when solving. This is done by `set_msglvl!(ps, key)` where key has the meaning:
+It is possible for Pardiso to print out timings and statistics when solving. This is done by `set_msglvl!(ps, key)` where `key` has the meaning:
 
 | enum               | integer | Solver                           |
 |--------------------|---------|----------------------------------|
@@ -224,7 +224,7 @@ set_perm!(ps, perm) # Perm is a Vector{Int}
 ### Potential "gotchas"
 
 * Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
-* For **symmetric** matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends to add an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
+* For **symmetric** matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends adding an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
 * Unless `IPARM[1] = 1`, all values in `IPARM` will be ignored and default values are used.
 * When solving a symmetric matrix, Pardiso expects only the upper triangular part. Since Julia has CSC matrices this means you should pass in `tril(A)` to the `pardiso` function. Use `checkmatrix` to see that you managed to get the matrix in a valid format.
 
