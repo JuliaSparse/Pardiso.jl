@@ -121,7 +121,6 @@ function __init__()
                 get_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
             else
                 load_lib_fortran("libgomp", [7, 8])
-                Libdl.dlopen("libgomp", Libdl.RTLD_GLOBAL)
                 Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
                 Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
                 libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
