@@ -91,6 +91,15 @@ end
 end
 
 
+@inline function ccall_pardiso_get_schur(ps::PardisoSolver, S::Vector{Tv},
+                                   IS, JS) where Tv
+    ccall(pardiso_get_schur_f[], Cvoid,
+          (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
+           Ptr{Int32}, Ptr{Int32}),
+          ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)),S,
+          IS, JS)
+end
+
 
 # Different checks
 function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
