@@ -20,6 +20,7 @@ elseif Sys.isapple()
 ]
 elseif Sys.islinux()
 [
+    "libpardiso600-GNU800-X86-64.so",
     "libpardiso600-GNU720-X86-64.so",
     "libpardiso500-GNU461-X86-64.so",
     "libpardiso500-GNU472-X86-64.so",
