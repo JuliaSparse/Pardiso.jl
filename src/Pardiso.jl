@@ -215,14 +215,14 @@ end
 
 
 function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
-               B::VecOrMat{Tv}, T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
+               B::StridedVecOrMat{Tv}, T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
   X = copy(B)
   solve!(ps, X, A, B, T)
   return X
 end
 
-function solve!(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
-                A::SparseMatrixCSC{Tv,Ti}, B::VecOrMat{Tv},
+function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
+                A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
                 T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
 
     pardisoinit(ps)
@@ -286,8 +286,8 @@ function solve!(ps::AbstractPardisoSolver, X::VecOrMat{Tv},
     return X
 end
 
-function pardiso(ps::AbstractPardisoSolver, X::VecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},
-                 B::VecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
+function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},
+                 B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     if length(X) != 0
         dim_check(X, A, B)
     end
@@ -316,7 +316,7 @@ function pardiso(ps::AbstractPardisoSolver, X::VecOrMat{Tv}, A::SparseMatrixCSC{
 end
 
 pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, Int32(0), Float64[], Int32[], Int32[], Int32(0), Float64[], Float64[])
-function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::VecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
+function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     pardiso(ps, Tv[], A, B)
 end
 
@@ -325,6 +325,8 @@ function dim_check(X, A, B)
                                                          "RHS has size as $(size(B)).")))
     size(A, 1) == size(B, 1) || throw(DimensionMismatch(string("matrix has $(size(A,1)) ",
                                                                "rows, RHS has $(size(B,1)) rows.")))
+    size(B, 1) == stride(B, 2) || throw(DimensionMismatch(
+                                            string("Only memory-contiguous RHS supported")))
 end
 
 end # module
