@@ -32,28 +32,29 @@ for pardiso_type in psolvers
         end
 
         A1 = sparse(rand(T, 10,10))
-        B = rand(T, 10, 2)
-        X = similar(B)
+        for B in (rand(T, 10, 2), view(rand(T, 10, 4), 1:10, 2:3))
+            X = similar(B)
 
-        # Test unsymmetric, herm indef, herm posdef and symmetric
-        for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, transpose(A1) + A1]
-            solve!(ps, X, A, B)
-            @test X ≈ A\B
+            # Test unsymmetric, herm indef, herm posdef and symmetric
+            for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, transpose(A1) + A1]
+                solve!(ps, X, A, B)
+                @test X ≈ A\Matrix(B)
 
-            X = solve(ps, A, B)
-            @test X ≈ A\B
+                X = solve(ps, A, B)
+                @test X ≈ A\Matrix(B)
 
-            solve!(ps, X, A, B, :C)
-            @test X ≈ A'\B
+                solve!(ps, X, A, B, :C)
+                @test X ≈ A'\Matrix(B)
 
-            X = solve(ps, A, B, :C)
-            @test X ≈ A'\B
+                X = solve(ps, A, B, :C)
+                @test X ≈ A'\Matrix(B)
 
-            solve!(ps, X, A, B, :T)
-            @test X ≈ copy(transpose(A))\B
+                solve!(ps, X, A, B, :T)
+                @test X ≈ copy(transpose(A))\Matrix(B)
 
-            X = solve(ps, A, B, :T)
-            @test X ≈ copy(transpose(A))\B
+                X = solve(ps, A, B, :T)
+                @test X ≈ copy(transpose(A))\Matrix(B)
+            end
         end
     end
 end

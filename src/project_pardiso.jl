@@ -102,7 +102,7 @@ end
 
 
 @inline function ccall_pardiso(ps::PardisoSolver, N::Int32, AA::Vector{Tv},
-                                   IA, JA, NRHS::Int32, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
+                                   IA, JA, NRHS::Int32, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
     ccall(pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
@@ -120,7 +120,7 @@ end
 
 # Different checks
 function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
-                    B::VecOrMat{Tv}) where {Ti,Tv <: PardisoNumTypes}
+                    B::StridedVecOrMat{Tv}) where {Ti,Tv <: PardisoNumTypes}
     N = Int32(size(A, 2))
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -165,7 +165,7 @@ function checkmatrix(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti}) where {Ti,Tv
     return
 end
 
-function checkvec(ps, B::VecOrMat{Tv}) where {Tv <: PardisoNumTypes}
+function checkvec(ps, B::StridedVecOrMat{Tv}) where {Tv <: PardisoNumTypes}
     N = Int32(size(B, 1))
     NRHS = Int32(size(B, 2))
     ERR = Int32[0]

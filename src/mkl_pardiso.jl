@@ -80,7 +80,7 @@ end
 
 
 function ccall_pardiso(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
-                       NRHS, B::VecOrMat{Tv}, X::VecOrMat{Tv}) where {Tv}
+                       NRHS, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
     ccall(mkl_pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
