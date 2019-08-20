@@ -1,6 +1,6 @@
 # Pardiso.jl
 
-The Pardiso.jl package provides an interface for using [PARDISO 5.0](http://www.pardiso-project.org/) and [Intel MKL PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without either having a valid license for PARDISO or having the MKL library installed. This package is available free of charge and in no way replaces or alters any functionality of the linked libraries.
+The Pardiso.jl package provides an interface for using [PARDISO 5.0 and 6.0](http://www.pardiso-project.org/) and [Intel MKL PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without either having a valid license for PARDISO or having the MKL library installed. This package is available free of charge and in no way replaces or alters any functionality of the linked libraries.
 
 ## Installation
 
