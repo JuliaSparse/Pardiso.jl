@@ -59,7 +59,7 @@ function collect_gfortran_lib_candidates(main_ver)
         gcc_path = "/usr/lib/gcc/x86_64-linux-gnu/"
         isdir(gcc_path) || return String[]
         vers = readdir(gcc_path)
-        filter!(x -> startswith(x, "$main_ver."), vers)
+        filter!(x -> startswith(x, "$main_ver.") || isequal(x, "$main_ver"), vers)
         for v in vers
             push!(candidates, joinpath(gcc_path, v))
         end
