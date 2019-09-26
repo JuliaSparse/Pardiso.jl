@@ -7,3 +7,4 @@
 /deps/*.lib
 /deps/*.dylib
 /deps/build.log
+Manifest.toml
