@@ -366,7 +366,7 @@ function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::In
     set_iparm!(ps,1,1) # use custom IPARM
     set_iparm!(ps,38,n) # set Schur complement block size to n
     set_phase!(ps,12) # analyze and factorize
-    B = Array{Tv}(undef,size(A,1)) # dummy array to feed to pardiso
+    B = Vector{Tv}(undef,size(A,1)) # dummy array to feed to pardiso
 
     if T==:N
         M = permutedims(A)
