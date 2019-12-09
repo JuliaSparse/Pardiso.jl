@@ -331,41 +331,84 @@ function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::Stride
 end
 
 # populated rows of S determine schur complment block
-schur_complement(ps::AbstractPardisoSolver,A,x::SparseVector) = schur_complement_permuted(ps,A,x.nzind)
-schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC) = schur_complement_permuted(ps,A,unique!(sort!(x.rowval)))
-function schur_complement_permuted(ps,A,rows)
+"""
+    schur_complement(ps,A,x) -> S
+
+Schur complement `S` of the submatrix defined by the nonzero entries of `x` in matrix `A`.
+If `n=nnz(x)`, then `S` is `n`-by-`n`.
+
+WARNING: for complex `M`, seems to be unstable, made worse as number of nonzero elements in `M` decreases
+"""
+schur_complement(ps::AbstractPardisoSolver,A,x::SparseVector,T::Symbol=:N) = _schur_complement_permuted(ps,A,x.nzind,T)
+schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(x.rowval)),T)
+
+# permute A and then compute complement of lower right-hand `n`-by-`n` block
+function _schur_complement_permuted(ps,A,rows,T::Symbol)
     P = sparse(vcat(setdiff(1:A.n,rows),rows),1:A.n,1,size(A)...)
-    schur_complement(ps,P'*A*P,length(rows))
+    schur_complement(ps,P'*A*P,length(rows),T)
 end
 # or integer gives last n rows and columns as schur complement block
-function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::Integer) where Tv
+"""
+    schur_complement(ps,M,n) -> S
+
+Schur complement `S` of upper-left block in `M`, where `n` is the size of lower-right block (and therefore also of Schur complement)
+
+WARNING: for complex `M`, seems to be unstable, made worse as number of nonzero elements in `M` decreases
+"""
+function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::Integer,T::Symbol=:N) where Tv <: PardisoNumTypes
+
     n ≥ size(A,1) ? throw(ErrorException("complement block size n=$n≥A.m=$(A.m)")) : nothing
+    # Tv<:Complex ? (@warn "unstable for complex types, unknown why") : nothing
+
     pardisoinit(ps)
     original_phase = get_phase(ps)
+    original_iparms = get_iparms(ps)
     set_iparm!(ps,1,1) # use custom IPARM
     set_iparm!(ps,38,n) # set Schur complement block size to n
     set_phase!(ps,12) # analyze and factorize
     B = Array{Tv}(undef,size(A,1)) # dummy array to feed to pardiso
-    pardiso(ps,B,permutedims(A),B) # transpose via IPARM(12) doesn't work at factorize step
+
+    if T==:N
+        M = permutedims(A)
+    elseif T == :C || T == :T
+        M = A
+    else
+        throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
+    end
+
+    pardiso(ps,B,M,B) # transpose via IPARM(12) doesn't work at factorize step (only on entry to solve step)
     S = pardisogetschur(ps) # get schur complement matrix
-    set_phase!(ps,original_phase) # reset phase to user setting
+
+    for i ∈ eachindex(original_iparms)
+        set_iparm!(ps,i,original_iparms[i])
+    end
+    set_phase!(ps, RELEASE_ALL)
+    pardiso(ps, B, M, B)
+    set_phase!(ps, original_phase) # reset phase to user setting
+
     return S
 end
 
+"""
+    pardisogetschur(ps) -> S
+
+retrieve schur complement from PardisoSolver `ps`.
+"""
 function pardisogetschur(ps::AbstractPardisoSolver)
     nnzschur = get_iparm(ps, 39)
     nschur = get_iparm(ps,38)
     T = isreal(get_matrixtype(ps)) ? Float64 : ComplexF64
     if nnzschur==0
         return spzeros(T,nschur,nschur)
+    else
+        S = Array{T}(undef,nnzschur)
+        IS = Array{Int32}(undef,nschur)
+        JS = Array{Int32}(undef,nnzschur)
+        ccall_pardiso_get_schur(ps,S,IS,JS)
+        IS = pushfirst!(IS,Int32(1)) # some issue with IS (nschur+1 doesn't seem to work)
+        S = permutedims(SparseMatrixCSC(nschur,nschur,IS,JS,S)) # really constructing CSR and then transposing
+        return S
     end
-    S = Array{T}(undef,nnzschur)
-    IS = Array{Int32}(undef,nschur)
-    JS = Array{Int32}(undef,nnzschur)
-    ccall_pardiso_get_schur(ps,S,IS,JS)
-    IS = pushfirst!(IS,Int32(1))
-    S = permutedims(SparseMatrixCSC(nschur,nschur,IS,JS,S)) # really constructing CSR and then transposing
-    return S
 end
 
 function dim_check(X, A, B)

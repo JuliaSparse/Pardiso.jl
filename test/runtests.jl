@@ -4,6 +4,7 @@ using Test
 using Pardiso
 using Random
 using SparseArrays
+using LinearAlgebra
 
 Random.seed!(1234)
 
@@ -73,6 +74,46 @@ if Sys.CPU_THREADS >= 4
         @test get_nprocs(ps) == np
     end
 end
+
+@testset "schur" begin
+    m = 100; n = 100; p = .05
+    for pardiso_type in psolvers
+        for T in (Float64, ComplexF64)
+            ps = pardiso_type()
+            pardisoinit(ps)
+            if T == Float64
+                set_matrixtype!(ps, 11)
+            else
+                set_matrixtype!(ps, 13)
+            end
+            for j ∈ 1:1
+                A = I + sprand(T,m,m,p)
+                A⁻¹ = inv(Matrix(A))
+                B = sprand(T,m,n,p)
+                C = sprand(T,n,m,p)
+                D = I + sprand(T,n,n,p)
+                M = [A B; C D]
+
+                # test integer block specification
+                S = schur_complement(ps, M, n);
+                @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
+
+                # test sparse vector block specification
+                x = spzeros(T,m+n)
+                x[(m+1):(m+n)] .= 1
+                S = schur_complement(ps, M, x);
+                @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
+
+                # test sparse matrix block specification
+                x = spzeros(T,m+n,2)
+                x[(m+1):(m+n-1),1] .= 1
+                x[end,2] = 1
+                S = schur_complement(ps, M, x);
+                @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
+            end
+        end
+    end
+end # testset
 
 @testset "error checks" begin
 for pardiso_type in psolvers
@@ -149,5 +190,4 @@ end
         pardiso(ps)
     end
 end
-
 end # testset

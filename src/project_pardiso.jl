@@ -92,7 +92,7 @@ end
 
 
 @inline function ccall_pardiso_get_schur(ps::PardisoSolver, S::Vector{Tv},
-                                   IS, JS) where Tv
+                                   IS::Vector{Int32}, JS::Vector{Int32}) where Tv
     ccall(pardiso_get_schur_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
            Ptr{Int32}, Ptr{Int32}),
