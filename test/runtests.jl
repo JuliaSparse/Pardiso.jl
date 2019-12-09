@@ -82,7 +82,7 @@ end
     # @test norm(D - C*A⁻¹*B - S) < 1e-10*(8)^2
 
     # try some random matrices
-    m = 100; n = 15; p = .1
+    m = 50; n = 15; p = .1
     for pardiso_type in psolvers
         for T in (Float64, )#ComplexF64)
             ps = pardiso_type()
@@ -93,11 +93,11 @@ end
                 set_matrixtype!(ps, 13)
             end
             for j ∈ 1:100
-                A = 100I + sprand(T,m,m,p)
+                A = 5I + sprand(T,m,m,p)
                 A⁻¹ = inv(Matrix(A))
                 B = sprand(T,m,n,p)
                 C = sprand(T,n,m,p)
-                D = 100I + sprand(T,n,n,p)
+                D = 5I + sprand(T,n,n,p)
                 M = [A B; C D]
 
                 # test integer block specification
