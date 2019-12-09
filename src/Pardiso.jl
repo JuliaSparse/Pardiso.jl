@@ -366,27 +366,31 @@ function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::In
     set_iparm!(ps,1,1) # use custom IPARM
     set_iparm!(ps,38,n) # set Schur complement block size to n
     set_phase!(ps,12) # analyze and factorize
-    B = Vector{Tv}(undef,size(A,1)) # dummy array to feed to pardiso
+    B = Matrix{Tv}(undef,size(A,1),0) # dummy array to feed to pardiso
 
+    # transpose via IPARM(12) doesn't work at factorize step (only on entry to solve step)
     if T==:N
         M = permutedims(A)
+        set_iparm!(ps, 12, 1)
     elseif T == :C
         M = conj(permutedims(A))
+        set_iparm!(ps, 12, 0)
     elseif T == :T
         M = A
+        set_iparm!(ps, 12, 0)
     else
         throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
     end
 
-    pardiso(ps,B,M,B) # transpose via IPARM(12) doesn't work at factorize step (only on entry to solve step)
+    pardiso(ps,B,M,B)
     S = pardisogetschur(ps) # get schur complement matrix
 
-    for i ∈ eachindex(original_iparms)
-        set_iparm!(ps,i,original_iparms[i])
-    end
     set_phase!(ps, RELEASE_ALL)
     pardiso(ps, B, M, B)
     set_phase!(ps, original_phase) # reset phase to user setting
+    for i ∈ eachindex(original_iparms)
+        set_iparm!(ps,i,original_iparms[i])
+    end
 
     return S
 end
@@ -403,9 +407,9 @@ function pardisogetschur(ps::AbstractPardisoSolver)
     if nnzschur==0
         return spzeros(T,nschur,nschur)
     else
-        S = Array{T}(undef,nnzschur)
-        IS = Array{Int32}(undef,nschur)
-        JS = Array{Int32}(undef,nnzschur)
+        S = Vector{T}(undef,nnzschur)
+        IS = Vector{Int32}(undef,nschur)
+        JS = Vector{Int32}(undef,nnzschur)
         ccall_pardiso_get_schur(ps,S,IS,JS)
         IS = pushfirst!(IS,Int32(1)) # some issue with IS (nschur+1 doesn't seem to work)
         S = permutedims(SparseMatrixCSC(nschur,nschur,IS,JS,S)) # really constructing CSR and then transposing

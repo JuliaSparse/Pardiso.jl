@@ -76,9 +76,15 @@ if Sys.CPU_THREADS >= 4
 end
 
 @testset "schur" begin
-    m = 100; n = 100; p = .05
+    # reproduce example from Pardiso website
+    include("schur_matrix_def.jl")
+    @test norm(real(D) - real(C)*rA⁻¹*real(B) - s) < 1e-10*(8)^2
+    # @test norm(D - C*A⁻¹*B - S) < 1e-10*(8)^2
+
+    # try some random matrices
+    m = 100; n = 15; p = .1
     for pardiso_type in psolvers
-        for T in (Float64, ComplexF64)
+        for T in (Float64, )#ComplexF64)
             ps = pardiso_type()
             pardisoinit(ps)
             if T == Float64
@@ -86,12 +92,12 @@ end
             else
                 set_matrixtype!(ps, 13)
             end
-            for j ∈ 1:1
-                A = I + sprand(T,m,m,p)
+            for j ∈ 1:100
+                A = 100I + sprand(T,m,m,p)
                 A⁻¹ = inv(Matrix(A))
                 B = sprand(T,m,n,p)
                 C = sprand(T,n,m,p)
-                D = I + sprand(T,n,n,p)
+                D = 100I + sprand(T,n,n,p)
                 M = [A B; C D]
 
                 # test integer block specification
@@ -114,6 +120,8 @@ end
         end
     end
 end # testset
+
+
 
 @testset "error checks" begin
 for pardiso_type in psolvers
