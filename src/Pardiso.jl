@@ -370,7 +370,9 @@ function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::In
 
     if T==:N
         M = permutedims(A)
-    elseif T == :C || T == :T
+    elseif T == :C
+        M = conj(permutedims(A))
+    elseif T == :T
         M = A
     else
         throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
