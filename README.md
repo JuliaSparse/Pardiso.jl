@@ -95,7 +95,7 @@ julia> X
  -1.17295    8.47922
 ```
 
-#### Schur Complement
+### Schur Complement
 
 Given a partitioned matrix `M = [A B; C D]`, the Schur complement of `A` in `M` is `S = D-CA⁻¹B`.
 This can be found with the function `schur_complement` with the following signatures:
