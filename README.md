@@ -101,7 +101,6 @@ Given a partitioned matrix `M = [A B; C D]`, the Schur complement of `A` in `M` 
 This can be found with the function `schur_complement` with the following signatures:
 
 * `schur_complement(ps, M, n)` returns Schur complement of submatrix `A` in `M`, where `n` is the size of submatrix `D` (and therefore also of Schur complement)
-* `schur_complement(ps, M, rows)` returns Schur complement of submatrix `A` in `M`, where `D` is defined by `M[rows,rows]`
 * `schur_complement(ps, M, x)` returns Schur complement of submatrix `A` in `M`, where submatrix `D` is defined by nonzero rows of `SparseVector` or `SparseMatrix` `x`.
 
 The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
