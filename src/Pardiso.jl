@@ -147,8 +147,8 @@ function __init__()
             pardiso_chkvec[] = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
-            if Sys.islinux() || PARDISO_VERSION ==6
-                gfortran_v = PARDISO_VERSION == 6 ? 8 : 7
+            if Sys.islinux() || PARDISO_VERSION == 6
+                gfortran_v = PARDISO_VERSION == 6 ? [8, 9] : [7]
                 for lib in ("libgfortran", "libgomp")
                     load_lib_fortran(lib, gfortran_v)
                 end
