@@ -21,18 +21,10 @@ println("Testing ", psolvers)
 @testset "solving" begin
 for pardiso_type in psolvers
     ps = pardiso_type()
-    pardisoinit(ps)
     for T in (Float64, ComplexF64)
-        if T == Float64
-            set_matrixtype!(ps, 11)
-        else
-            set_matrixtype!(ps, 13)
-        end
-
         A1 = sparse(rand(T, 10,10))
         for B in (rand(T, 10, 2), view(rand(T, 10, 4), 1:10, 2:3))
             X = similar(B)
-
             # Test unsymmetric, herm indef, herm posdef and symmetric
             for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, transpose(A1) + A1]
                 solve!(ps, X, A, B)

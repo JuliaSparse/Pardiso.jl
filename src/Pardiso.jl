@@ -205,12 +205,7 @@ function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
   return X
 end
 
-function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
-                A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
-                T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
-
-    pardisoinit(ps)
-
+function fix_iparm!(ps, T)
     # We need to set the transpose flag in PARDISO when we DON'T want
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
@@ -225,10 +220,12 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
     else
         throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
     end
+end
 
-    # If we want the matrix to only be transposed and not conjugated
-    # we have to conjugate it before sending it to Pardiso due to CSC CSR
-    # mismatch.
+function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
+                A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
+                T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
+    set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
 
     # This is the heuristics for choosing what matrix type to use
     ##################################################################
@@ -238,6 +235,8 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
     # - Else solve as unsymmetric.
     if ishermitian(A)
         eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
+        pardisoinit(ps)
+        fix_iparm!(ps, T)
         try
             if typeof(ps) == PardisoSolver
                    pardiso(ps, X, get_matrix(ps, A, T), B)
@@ -249,24 +248,35 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 pardiso(ps, X, get_matrix(ps, A, T), B)
             end
         catch e
-            isa(e, PardisoPosDefException) || rethrow(e)
+            set_phase!(ps, RELEASE_ALL)
+            pardiso(ps, X, A, B)
+            set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
+            if !isa(e, PardisoPosDefException)
+                rethrow()
+            end
             eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF)
+            pardisoinit(ps)
+            fix_iparm!(ps, T)
             pardiso(ps, X, get_matrix(ps, A, T), B)
         end
     elseif issymmetric(A)
         set_matrixtype!(ps, COMPLEX_SYM)
+        pardisoinit(ps)
+        fix_iparm!(ps, T)
         pardiso(ps, X, get_matrix(ps, A, T), B)
     else
         eltype(A) == Float64 ? set_matrixtype!(ps, REAL_NONSYM) : set_matrixtype!(ps, COMPLEX_NONSYM)
+        pardisoinit(ps)
+        fix_iparm!(ps, T)
         pardiso(ps, X, get_matrix(ps, A, T), B)
     end
-    original_phase = get_phase(ps)
 
     # Release memory, TODO: We are running the convert on IA and JA here
     # again which is unnecessary.
     set_phase!(ps, RELEASE_ALL)
     pardiso(ps, X, A, B)
-    set_phase!(ps, original_phase)
+
+    set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
     return X
 end
 
