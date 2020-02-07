@@ -29,9 +29,7 @@ If you rather use a self installed MKL follow these instructions:
   information.
 * Note that the `MKLROOT` environment variable must be set whenever using the library.
 
-This package is tested with MKL 2020.
-
-### PARDISO
+### PARDISO 6.0
 
 * Put the PARDISO library `libpardiso600-WIN-X86-64.dll`, `libpardiso600-GNUXXX-X86-64.so` or
   `libpardiso600-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
@@ -40,6 +38,11 @@ This package is tested with MKL 2020.
 * Perform the platform specific steps below
 * Run `Pkg.build("Pardiso")`
 * Run `Pardiso.show_build_log()` to see the build log for additional information.
+
+Note: Weird errors and problems with MKL Pardiso has been observed when Pardiso 6.0 is enabled
+(likely because some library that is needed by Pardiso 6.0 is problematic with MKL).
+If you want to use MKL Pardiso it is better ot just disable Paridso 6.0 by not setting
+the environment variable `JULIA_PARDISO` (and rerunning `build Pardiso`).
 
 ##### Linux / macOS specific
 
