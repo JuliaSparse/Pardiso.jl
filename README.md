@@ -1,16 +1,35 @@
 # Pardiso.jl
 
-The Pardiso.jl package provides an interface for using [PARDISO 5.0 and 6.0](http://www.pardiso-project.org/) and [Intel MKL PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without either having a valid license for PARDISO or having the MKL library installed. This package is available free of charge and in no way replaces or alters any functionality of the linked libraries.
+The Pardiso.jl package provides an interface for using [PARDISO 5.0 and
+6.0](http://www.pardiso-project.org/) and [Intel MKL
+PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia
+language](http://julialang.org). You cannot use `Pardiso.jl` without either
+having a valid license for PARDISO or having the MKL library installed. This
+package is available free of charge and in no way replaces or alters any
+functionality of the linked libraries.
 
 ## Installation
 
-The package itself is installed with `Pkg.add("Pardiso")` but you also need to follow the installation instructions below to install a working PARDISO library.
+The package itself is installed with `Pkg.add("Pardiso")` but you also need to
+follow the installation instructions below to install a working PARDISO
+library.
 
 ### MKL PARDISO
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly, typically done by executing something like `source /opt/intel/bin/compilervars.sh intel64`.
+By default Julia, will automatically install a suitable MKL for your platform.
+If you rather use a self installed MKL follow these instructions:
+
+* Set the `MKLROOT` environment variable. See the [MKL getting started
+  manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started)
+  for a thorough guide how to set this variable correctly, typically done by
+  executing something like `source /opt/intel/mkl/bin/mklvars.sh intel64` or
+  running `"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64`
 * Run `Pkg.build("Pardiso")`
-* Run `Pardiso.show_build_log()` to see the build log for additional information.
+* Run `Pardiso.show_build_log()` to see the build log for additional
+  information.
+* Note that the `MKLROOT` environment variable must be set whenever using the library.
+
+This package is tested with MKL 2020
 
 ### PARDISO
 

@@ -79,26 +79,21 @@ println("\nMKL Pardiso")
 println("=============")
 function find_mklparadiso()
     if haskey(ENV, "MKLROOT")
-        println("found MKLROOT environment variable, using it")
-        return ENV["MKLROOT"], true
+        println("found MKLROOT environment varaible, enabling local MKL")
+        return true
     end
-    println("did not find MKLROOT environment variable, assuming MKL is not installed")
-    return "", false
+    println("did not find MKLROOT environment variable, using provided MKL")
+    return false
 end
 
-mklroot, found_mklpardiso = find_mklparadiso()
-
-if !(found_mklpardiso || found_pardisolib)
-    println("WARNING: no Pardiso library managed to load")
-end
+found_mklpardiso = find_mklparadiso()
 
 open("deps.jl", "w") do f
     print(f,
 """
-const MKL_PARDISO_LIB_FOUND = $found_mklpardiso
+const LOCAL_MKL_FOUND = $found_mklpardiso
 const PARDISO_LIB_FOUND = $found_pardisolib
 const PARDISO_VERSION = $pardiso_version
-const MKLROOT = $(repr(mklroot))
 const PARDISO_PATH = raw"$pardisopath"
 """
 )

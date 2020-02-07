@@ -7,21 +7,27 @@
 # using the PARDISO solver, where A is a non symmetric n x n matrix, B is an
 # n x m matrix, and X is another n x m matrix.
 using Pardiso
+using SparseArrays
+using Random
+using Printf
+using Test
+
 verbose = false
 
 n = 4  # The number of equations.
 m = 3  # The number of right-hand sides.
 
-A = sparse([ 0. -2  3 0
-            -2  4 -4 1
-            -3  5  1 1
-             1 -3  0 2 ])
+A = sparse([ 0. -2  3  0
+            -2   4 -4  1
+            -3   5  1  1
+             1  -3  0  2])
 
 # Generate a random collection of right-hand sides.
-B = ones(n,m)
+B = rand(n,m)
 
 # Initialize the PARDISO internal data structures.
-ps = PardisoSolver()
+# ps = PardisoSolver()
+ps = MKLPardisoSolver()
 
 if verbose
     set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
@@ -62,6 +68,7 @@ pardiso(ps, X, A_pardiso, B)
 # Compute the residuals.
 R = maximum(abs.(A*X - B))
 @printf("The maximum residual for the solution X is %0.3g.\n", R)
+@test R < 1e-12
 
 # Free the PARDISO data structures.
 set_phase!(ps, Pardiso.RELEASE_ALL)

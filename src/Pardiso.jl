@@ -6,6 +6,8 @@ if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
 end
 
+include("../deps/deps.jl")
+
 function show_build_log()
     logfile = joinpath(@__DIR__, "..", "deps", "build.log")
     if !isfile(logfile)
@@ -19,6 +21,18 @@ using Libdl
 using SparseArrays
 using LinearAlgebra
 import Base.show
+
+if !LOCAL_MKL_FOUND
+    import MKL_jll
+end
+
+if Sys.iswindows()
+    const libmkl_rt = "mkl_rt"
+elseif Sys.isapple()
+    const libmkl_rt = "@rpath/libmkl_rt.dylib"
+else
+    const libmkl_rt = "libmkl_rt"
+end
 
 export PardisoSolver, MKLPardisoSolver
 export set_iparm!, set_dparm!, set_matrixtype!, set_solver!, set_phase!, set_msglvl!, set_nprocs!
@@ -78,13 +92,6 @@ function load_lib_fortran(lib::String, vs::Vector{Int})
     Libdl.dlopen(path * "." * Libdl.dlext, Libdl.RTLD_GLOBAL)
 end
 
-# MKL
-const mkl_init = Ref{Ptr}()
-const mkl_pardiso_f = Ref{Ptr}()
-const set_nthreads = Ref{Ptr}()
-const get_nthreads = Ref{Ptr}()
-const MKL_PARDISO_LOADED = Ref(false)
-
 # Pardiso
 const init = Ref{Ptr}()
 const pardiso_f = Ref{Ptr}()
@@ -100,39 +107,9 @@ function __init__()
     if !haskey(ENV, "PARDISOLICMESSAGE")
         ENV["PARDISOLICMESSAGE"] = 1
     end
-    # Global variables used here are defined in the created deps.jl file in the deps folder
-    if !(MKL_PARDISO_LIB_FOUND || PARDISO_LIB_FOUND)
-        @warn "No Pardiso library found when Pkg.build(\"Pardiso\") ran, this package will not currently be usable. " *
-              "See the installation instructions and rerun Pkg.build(\"Pardiso\")."
-    end
 
-    # This loading is a bit of a mess
-    if MKL_PARDISO_LIB_FOUND
-        try
-            if Sys.iswindows() || Sys.isapple()
-                if Sys.iswindows()
-                    libmkl_core = Libdl.dlopen(joinpath(MKLROOT, "..", "redist", "intel64", "mkl", "mkl_rt.dll"), Libdl.RTLD_GLOBAL)
-                else
-                    libmkl_core = Libdl.dlopen(string(MKLROOT, "/lib/libmkl_rt"), Libdl.RTLD_GLOBAL)
-                end
-                mkl_init[] = Libdl.dlsym(libmkl_core, "pardisoinit")
-                mkl_pardiso_f[] = Libdl.dlsym(libmkl_core, "pardiso")
-                set_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_set_num_threads")
-                get_nthreads[] = Libdl.dlsym(libmkl_core, "mkl_domain_get_max_threads")
-            else
-                load_lib_fortran("libgomp", [6, 7, 8])
-                Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_core"), Libdl.RTLD_GLOBAL)
-                Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gnu_thread"), Libdl.RTLD_GLOBAL)
-                libmkl_gd = Libdl.dlopen(string(MKLROOT, "/lib/intel64/libmkl_gf_lp64"), Libdl.RTLD_GLOBAL)
-                mkl_init[] = Libdl.dlsym(libmkl_gd, "pardisoinit")
-                mkl_pardiso_f[] = Libdl.dlsym(libmkl_gd, "pardiso")
-                set_nthreads[] = Libdl.dlsym(libmkl_gd, "mkl_domain_set_num_threads")
-                get_nthreads[] = Libdl.dlsym(libmkl_gd, "mkl_domain_get_max_threads")
-            end
-            MKL_PARDISO_LOADED[] = true
-        catch e
-            @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
-        end
+    if LOCAL_MKL_FOUND && !haskey(ENV, "MKLROOT")
+        @warn "MKLROOT not set, MKL Pardiso solver will not be functional"
     end
 
     if PARDISO_LIB_FOUND
@@ -157,9 +134,16 @@ function __init__()
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
             if Sys.isunix()
-                if !MKL_PARDISO_LOADED[]
-                    Libdl.dlopen("libblas", Libdl.RTLD_GLOBAL)
-                    Libdl.dlopen("liblapack", Libdl.RTLD_GLOBAL)
+                ptr = C_NULL
+                for l in ("libblas", "libblas.so.3")
+                    ptr = Libdl.dlopen_e(l, Libdl.RTLD_GLOBAL)
+                    @show ptr
+                    if ptr !== C_NULL
+                        break
+                    end
+                end
+                if ptr == C_NULL
+                    error("could not load blas library")
                 end
             end
             PARDISO_LOADED[] = true
@@ -168,8 +152,6 @@ function __init__()
         end
     end
 end
-
-include("../deps/deps.jl")
 include("enums.jl")
 include("project_pardiso.jl")
 include("mkl_pardiso.jl")
@@ -284,6 +266,32 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
     pardiso(ps, X, A, B)
     set_phase!(ps, original_phase)
     return X
+end
+
+function get_matrix(ps::AbstractPardisoSolver, A, T)
+    mtype = get_matrixtype(ps)
+
+    if isposornegdef(mtype)
+        if ps isa MKLPardisoSolver
+            T == :C && return conj(tril(A))
+            return tril(A)
+        elseif ps isa PardisoSolver
+            T == :T && return tril(A)
+            return conj(tril(A))
+        end
+    end
+
+    if !issymmetric(mtype)
+        T == :C && return conj(A)
+        return A
+    end
+
+    if mtype == COMPLEX_SYM
+        T == :C && return conj(tril(A))
+        return tril(A)
+    end
+
+    error("Unhandled matrix type")
 end
 
 function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},

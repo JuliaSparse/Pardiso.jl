@@ -13,10 +13,6 @@ mutable struct MKLPardisoSolver <: AbstractPardisoSolver
 end
 
 function MKLPardisoSolver()
-    if !MKL_PARDISO_LOADED[]
-        error("mkl library was not loaded, unable to create solver")
-    end
-
     pt = zeros(Int, 64)
     iparm = zeros(Int32, 64)
     mtype = REAL_NONSYM
@@ -43,36 +39,17 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
                                   "\tMatrix type: $(MATRIX_STRING[get_matrixtype(ps)])\n",
                                   "\tPhase: $(PHASE_STRING[get_phase(ps)])"))
 
-set_nprocs!(ps::MKLPardisoSolver, n::Integer) = ccall(set_nthreads[], Cvoid, (Ptr{Int32}, Ptr{Int32}), Ref((Int32(n))), Ref(MKL_DOMAIN_PARDISO))
-get_nprocs(ps::MKLPardisoSolver) = ccall(get_nthreads[], Int32, (Ptr{Int32},), Ref(MKL_DOMAIN_PARDISO))
+set_nprocs!(ps::MKLPardisoSolver, n::Integer) =
+    ccall((:mkl_domain_set_num_threads, libmkl_rt), Cvoid, (Ptr{Int32}, Ptr{Int32}), Ref((Int32(n))), Ref(MKL_DOMAIN_PARDISO))
+get_nprocs(ps::MKLPardisoSolver) =
+    ccall((:mkl_domain_get_max_threads, libmkl_rt), Int32, (Ptr{Int32},), Ref(MKL_DOMAIN_PARDISO))
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
-function get_matrix(ps::MKLPardisoSolver, A, T)
-    mtype = get_matrixtype(ps)
-
-    if isposornegdef(mtype)
-        T == :C && return conj(tril(A))
-        return tril(A)
-    end
-
-    if !issymmetric(mtype)
-        T == :C && return conj(A)
-        return A
-    end
-
-    if mtype == COMPLEX_SYM
-        T == :C && return conj(tril(A))
-        return tril(A)
-    end
-
-    error("Unhandled matrix type")
-end
-
 function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Ref{Int32}(0)
-    ccall(mkl_init[], Cvoid,
+    ccall((:pardisoinit, libmkl_rt), Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
           ps.pt, Ref(Int32(ps.mtype)), ps.iparm)
     check_error(ps, ERR[])
@@ -82,7 +59,7 @@ end
 function ccall_pardiso(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
                        NRHS, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
     ERR = Ref{Int32}(0)
-    ccall(mkl_pardiso_f[], Cvoid,
+    ccall((:pardiso, libmkl_rt), Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
@@ -109,5 +86,4 @@ function check_error(ps::MKLPardisoSolver, err::Integer)
     err != -12 || throw(PardisoException("pardiso_64 called from 32-bit library"))
     return
 end
-
 
