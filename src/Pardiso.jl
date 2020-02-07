@@ -236,15 +236,7 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
     if ishermitian(A)
         eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
         try
-            if typeof(ps) == PardisoSolver
-                   pardiso(ps, X, get_matrix(ps, A, T), B)
-            else
-                # Workaround for #3
-                if eltype(A) == ComplexF64
-                    throw(PardisoPosDefException(""))
-                end
-                pardiso(ps, X, get_matrix(ps, A, T), B)
-            end
+            pardiso(ps, X, get_matrix(ps, A, T), B)
         catch e
             isa(e, PardisoPosDefException) || rethrow(e)
             eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF)
