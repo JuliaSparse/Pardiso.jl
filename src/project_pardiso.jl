@@ -27,7 +27,8 @@ function PardisoSolver()
     if haskey(ENV, "OMP_NUM_THREADS")
         iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
     else
-        iparm[3] = 1
+        # Assume 2 threads per core
+        iparm[3] = max(div(Sys.CPU_THREADS, 2), 1)
     end
 
     mnum = 1
