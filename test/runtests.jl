@@ -89,7 +89,6 @@ for pardiso_type in psolvers
         checkvec(ps, B)
     end
 
-
     set_matrixtype!(ps, 13)
     @test_throws ErrorException pardiso(ps, X, A, B)
     @test_throws ArgumentError solve(ps, A, B, :P)
