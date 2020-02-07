@@ -75,6 +75,7 @@ if Sys.CPU_THREADS >= 4
     end
 end
 
+if Pardiso.PARDISO_LOADED[]
 @testset "schur" begin
     # reproduce example from Pardiso website
     include("schur_matrix_def.jl")
@@ -120,8 +121,7 @@ end
         end
     end
 end # testset
-
-
+end
 
 @testset "error checks" begin
 for pardiso_type in psolvers
