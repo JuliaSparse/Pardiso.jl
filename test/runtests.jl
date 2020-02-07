@@ -63,13 +63,15 @@ end #testset
     include("../examples/exampleherm.jl")
 end
 
-@testset "procs" begin
-    ps = MKLPardisoSolver()
-    np = get_nprocs(ps)
-    set_nprocs!(ps, 2)
-    @test get_nprocs(ps) == 2
-    set_nprocs!(ps, np)
-    @test get_nprocs(ps) == np
+if Sys.CPU_THREADS >= 4
+    @testset "procs" begin
+        ps = MKLPardisoSolver()
+        np = get_nprocs(ps)
+        set_nprocs!(ps, 2)
+        @test get_nprocs(ps) == 2
+        set_nprocs!(ps, np)
+        @test get_nprocs(ps) == np
+    end
 end
 
 @testset "error checks" begin
