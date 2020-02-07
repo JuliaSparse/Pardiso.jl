@@ -94,7 +94,7 @@ julia> X
 
 ### Setting the number of threads
 
-The number of threads to use is set in different ways for MKL PARDISO and PARDISO 5.0.
+The number of threads to use is set in different ways for MKL PARDISO and PARDISO 6.0.
 
 #### MKL PARDISO
 
@@ -103,7 +103,7 @@ set_nprocs!(ps, i) # Sets the number of threads to use
 get_nprocs(ps) # Gets the number of threads being used
 ```
 
-#### PARDISO 5.0
+#### PARDISO 6.0
 
 The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
 
@@ -113,7 +113,7 @@ The number of threads used by a `PardisoSolver` can be retrieved with `get_nproc
 
 This section discusses some more advanced usage of `Pardiso.jl`.
 
-For terminology in this section please refer to the [PARDISO 5.0 manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
+For terminology in this section please refer to the [PARDISO 6.0 manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
 
 After using functionality in this section, calls should no longer be made to the `solve` functions but instead directly to the function
 
@@ -145,8 +145,8 @@ The matrix type can be explicitly set with `set_matrixtype!(ps, key)` where the 
 
 The matrix type for a solver can be retrieved with `get_matrixtype(ps)`.
 
-### Setting the solver (5.0 only)
-PARDISO 5.0 supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
+### Setting the solver (6.0 only)
+PARDISO 6.0 supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
 
 | enum               | integer | Solver                           |
 |--------------------|---------|----------------------------------|
@@ -174,7 +174,7 @@ Depending on the phase calls to `solve` (and `pardiso` which is mentioned later)
 | RELEASE_ALL                           | -1      | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
-Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (5.0 only) parameters.
+Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (6.0 only) parameters.
 This can be done with the getters and setters:
 
 ```jl
@@ -182,7 +182,7 @@ get_iparm(ps, i) # Gets IPARM[i]
 get_iparms(ps) # Gets IPARM
 set_iparm!(ps, i, v) # Sets IPARM[i] = v
 
-# 5.0 only
+# 6.0 only
 get_dparm(ps, i) # Gets DPARM[i]
 get_dparms(ps) # Gets DPARM
 set_dparm!(ps, i, v) # Sets DPARM[i] = v
@@ -201,7 +201,7 @@ It is possible for Pardiso to print out timings and statistics when solving. Thi
 
 ### Matrix and vector checkers
 
-PARDISO 5.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
+PARDISO 6.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
 
 ```jl
 printstats(ps, A, B)
