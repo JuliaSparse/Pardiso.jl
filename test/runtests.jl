@@ -4,6 +4,7 @@ using Test
 using Pardiso
 using Random
 using SparseArrays
+using LinearAlgebra
 
 Random.seed!(1234)
 
@@ -72,6 +73,54 @@ if Sys.CPU_THREADS >= 4
         set_nprocs!(ps, np)
         @test get_nprocs(ps) == np
     end
+end
+
+if Pardiso.PARDISO_LOADED[]
+@testset "schur" begin
+    # reproduce example from Pardiso website
+    include("schur_matrix_def.jl")
+    @test norm(real(D) - real(C)*rA⁻¹*real(B) - s) < 1e-10*(8)^2
+    # @test norm(D - C*A⁻¹*B - S) < 1e-10*(8)^2
+
+    # try some random matrices
+    m = 50; n = 15; p = .1
+    for pardiso_type in psolvers
+        for T in (Float64, )#ComplexF64)
+            ps = pardiso_type()
+            pardisoinit(ps)
+            if T == Float64
+                set_matrixtype!(ps, 11)
+            else
+                set_matrixtype!(ps, 13)
+            end
+            for j ∈ 1:100
+                A = 5I + sprand(T,m,m,p)
+                A⁻¹ = inv(Matrix(A))
+                B = sprand(T,m,n,p)
+                C = sprand(T,n,m,p)
+                D = 5I + sprand(T,n,n,p)
+                M = [A B; C D]
+
+                # test integer block specification
+                S = schur_complement(ps, M, n);
+                @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
+
+                # test sparse vector block specification
+                x = spzeros(T,m+n)
+                x[(m+1):(m+n)] .= 1
+                S = schur_complement(ps, M, x);
+                @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
+
+                # test sparse matrix block specification
+                x = spzeros(T,m+n,2)
+                x[(m+1):(m+n-1),1] .= 1
+                x[end,2] = 1
+                S = schur_complement(ps, M, x);
+                @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
+            end
+        end
+    end
+end # testset
 end
 
 @testset "error checks" begin
@@ -149,5 +198,4 @@ end
         pardiso(ps)
     end
 end
-
 end # testset

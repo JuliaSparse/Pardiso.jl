@@ -43,6 +43,7 @@ export get_maxfct, get_perm, get_mnum
 export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 export get_matrix
+export schur_complement, pardisogetschur
 
 struct PardisoException <: Exception
     info::String
@@ -101,6 +102,7 @@ const pardiso_printstats = Ref{Ptr}()
 const pardiso_printstats_z = Ref{Ptr}()
 const pardiso_chkvec = Ref{Ptr}()
 const pardiso_chkvec_z = Ref{Ptr}()
+const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
@@ -123,6 +125,7 @@ function __init__()
             pardiso_printstats_z[] = Libdl.dlsym(libpardiso, "pardiso_printstats_z")
             pardiso_chkvec[] = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
+            pardiso_get_schur_f[] = Libdl.dlsym(libpardiso, "pardiso_get_schur")
 
             if Sys.isunix()
                 gfortran_v = [8, 9]
@@ -325,6 +328,93 @@ end
 pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, Int32(0), Float64[], Int32[], Int32[], Int32(0), Float64[], Float64[])
 function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     pardiso(ps, Tv[], A, B)
+end
+
+# populated rows of S determine schur complment block
+"""
+    schur_complement(ps,A,x) -> S
+
+Schur complement `S` of the submatrix defined by the nonzero entries of `x` in matrix `A`.
+If `n=nnz(x)`, then `S` is `n`-by-`n`.
+
+WARNING: for complex `M`, seems to be unstable, made worse as number of nonzero elements in `M` decreases
+"""
+schur_complement(ps::AbstractPardisoSolver,A,x::SparseVector,T::Symbol=:N) = _schur_complement_permuted(ps,A,x.nzind,T)
+schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(x.rowval)),T)
+
+# permute A and then compute complement of lower right-hand `n`-by-`n` block
+function _schur_complement_permuted(ps,A,rows,T::Symbol)
+    P = sparse(vcat(setdiff(1:A.n,rows),rows),1:A.n,1,size(A)...)
+    schur_complement(ps,P'*A*P,length(rows),T)
+end
+# or integer gives last n rows and columns as schur complement block
+"""
+    schur_complement(ps,M,n) -> S
+
+Schur complement `S` of upper-left block in `M`, where `n` is the size of lower-right block (and therefore also of Schur complement)
+
+WARNING: for complex `M`, seems to be unstable, made worse as number of nonzero elements in `M` decreases
+"""
+function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::Integer,T::Symbol=:N) where Tv <: PardisoNumTypes
+
+    n ≥ size(A,1) ? throw(ErrorException("complement block size n=$n≥A.m=$(A.m)")) : nothing
+    # Tv<:Complex ? (@warn "unstable for complex types, unknown why") : nothing
+
+    pardisoinit(ps)
+    original_phase = get_phase(ps)
+    original_iparms = get_iparms(ps)
+    set_iparm!(ps,1,1) # use custom IPARM
+    set_iparm!(ps,38,n) # set Schur complement block size to n
+    set_phase!(ps,12) # analyze and factorize
+    B = Matrix{Tv}(undef,size(A,1),0) # dummy array to feed to pardiso
+
+    # transpose via IPARM(12) doesn't work at factorize step (only on entry to solve step)
+    if T==:N
+        M = permutedims(A)
+        set_iparm!(ps, 12, 1)
+    elseif T == :C
+        M = conj(permutedims(A))
+        set_iparm!(ps, 12, 0)
+    elseif T == :T
+        M = A
+        set_iparm!(ps, 12, 0)
+    else
+        throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
+    end
+
+    pardiso(ps,B,M,B)
+    S = pardisogetschur(ps) # get schur complement matrix
+
+    set_phase!(ps, RELEASE_ALL)
+    pardiso(ps, B, M, B)
+    set_phase!(ps, original_phase) # reset phase to user setting
+    for i ∈ eachindex(original_iparms)
+        set_iparm!(ps,i,original_iparms[i])
+    end
+
+    return S
+end
+
+"""
+    pardisogetschur(ps) -> S
+
+retrieve schur complement from PardisoSolver `ps`.
+"""
+function pardisogetschur(ps::AbstractPardisoSolver)
+    nnzschur = get_iparm(ps, 39)
+    nschur = get_iparm(ps,38)
+    T = isreal(get_matrixtype(ps)) ? Float64 : ComplexF64
+    if nnzschur==0
+        return spzeros(T,nschur,nschur)
+    else
+        S = Vector{T}(undef,nnzschur)
+        IS = Vector{Int32}(undef,nschur)
+        JS = Vector{Int32}(undef,nnzschur)
+        ccall_pardiso_get_schur(ps,S,IS,JS)
+        IS = pushfirst!(IS,Int32(1)) # some issue with IS (nschur+1 doesn't seem to work)
+        S = permutedims(SparseMatrixCSC(nschur,nschur,IS,JS,S)) # really constructing CSR and then transposing
+        return S
+    end
 end
 
 function dim_check(X, A, B)

@@ -95,6 +95,51 @@ julia> X
  -1.17295    8.47922
 ```
 
+### Schur Complement (5.0 & 6.0 only)
+
+Given a partitioned matrix `M = [A B; C D]`, the Schur complement of `A` in `M` is `S = D-CA⁻¹B`.
+This can be found with the function `schur_complement` with the following signatures:
+
+* `schur_complement(ps, M, n)` returns Schur complement of submatrix `A` in `M`, where `n` is the size of submatrix `D` (and therefore also of Schur complement)
+* `schur_complement(ps, M, x)` returns Schur complement of submatrix `A` in `M`, where submatrix `D` is defined by nonzero rows of `SparseVector` or `SparseMatrix` `x`.
+
+The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
+
+Here is an example of finding the Schur complement:
+
+```jl
+ps = PardisoSolver()
+m = 100; n = 5; p = .5; T = Float64
+rng = MersenneTwister(1234);
+A = I + sprand(rng,T,m,m,p)
+A⁻¹ = inv(Matrix(A))
+B = sprand(rng,T,m,n,p)
+C = sprand(rng,T,n,m,p)
+D = sprand(rng,T,n,n,p)
+M = [A B; C D]
+S = schur_complement(ps,M,n)
+```
+
+which gives
+
+```jl
+julia> S
+5×5 Array{Float64,2}:
+  -0.121404    1.49473  -1.25965    7.40326    0.571538
+ -19.4928     -7.71151  12.9496    -7.13646  -20.4194  
+   9.88029     3.35502  -7.2346     1.70651   13.9759  
+  -9.06094    -5.86454   7.44917   -2.54985   -9.17327
+ -33.7006    -17.8323   20.2588   -19.5863   -37.6132
+```
+
+We can check the validity by comparing to explicity form:
+```jl
+julia> norm(D - C*A⁻¹*B - S)
+5.033075778861378e-13
+```
+
+At present there seems to be an instability in the Schur complement computation for complex matrices.
+
 ### Setting the number of threads
 
 The number of threads to use is set in different ways for MKL PARDISO and PARDISO 6.0.
@@ -228,6 +273,16 @@ get_maxfct(ps)
 get_perm(ps)
 set_perm!(ps, perm) # Perm is a Vector{Int}
 ```
+
+### Schur Complement (5.0 & 6.0 only)
+
+The `pardiso(ps,...)` syntax can be used to compute the Schur compelement (as described below). The answer can be retrieved with `pardisogetschur(ps)`.
+
+To use the low-level API to compute the Schur complement:
+  * use custom IPARMS (`set_iparm!(ps,1,1)`), set the Schur complement block size to `n` (`set_iparm!(ps,38,n)`), and set the phase to analyze & factorize (`set_phase!(ps,12)`).
+  * compute the Schur complement by calling `pardiso(ps,X,M,X)`, where `B` is a dummy vector with `length(X)=size(M,1)` that shares element type with `M`.
+  * retrieve with `pardisogetschur(ps)`
+
 
 ### Potential "gotchas"
 
