@@ -124,11 +124,9 @@ function __init__()
             pardiso_chkvec[] = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
 
-            if Sys.islinux() || PARDISO_VERSION == 6
-                gfortran_v = PARDISO_VERSION == 6 ? [8, 9] : [7]
-                for lib in ("libgfortran", "libgomp")
-                    load_lib_fortran(lib, gfortran_v)
-                end
+            gfortran_v = [8, 9]
+            for lib in ("libgfortran", "libgomp")
+                load_lib_fortran(lib, gfortran_v)
             end
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
@@ -137,7 +135,6 @@ function __init__()
                 ptr = C_NULL
                 for l in ("libblas", "libblas.so.3")
                     ptr = Libdl.dlopen_e(l, Libdl.RTLD_GLOBAL)
-                    @show ptr
                     if ptr !== C_NULL
                         break
                     end

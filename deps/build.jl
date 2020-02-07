@@ -11,20 +11,15 @@ const LIBPARDISONAMES =
 if Sys.iswindows()
 [
     "libpardiso600-WIN-X86-64.dll",
-    "libpardiso500-WIN-X86-64.dll",
 ]
 elseif Sys.isapple()
 [
     "libpardiso600-MACOS-X86-64.dylib",
-    "libpardiso500-MACOS-X86-64.dylib",
 ]
 elseif Sys.islinux()
 [
     "libpardiso600-GNU800-X86-64.so",
     "libpardiso600-GNU720-X86-64.so",
-    "libpardiso500-GNU461-X86-64.so",
-    "libpardiso500-GNU472-X86-64.so",
-    "libpardiso500-GNU481-X86-64.so",
 ]
 else
     error("unhandled OS")
@@ -40,7 +35,6 @@ if !haskey(ENV, "JULIA_PARDISO")
             "the folder where the Pardiso library is located")
 end
 
-pardiso_version = 0
 function find_paradisolib()
     found_lib = false
     for prefix in PATH_PREFIXES
@@ -54,11 +48,6 @@ function find_paradisolib()
                     Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
                     println("    loaded successfully!")
                     global PARDISO_LIB_FOUND = true
-                    if occursin("600", libname)
-                        global pardiso_version = 6
-                    else
-                        global pardiso_version = 5
-                    end
                     return path, true
                 end
             catch e
@@ -93,7 +82,6 @@ open("deps.jl", "w") do f
 """
 const LOCAL_MKL_FOUND = $found_mklpardiso
 const PARDISO_LIB_FOUND = $found_pardisolib
-const PARDISO_VERSION = $pardiso_version
 const PARDISO_PATH = raw"$pardisopath"
 """
 )
