@@ -95,7 +95,7 @@ julia> X
  -1.17295    8.47922
 ```
 
-### Schur Complement (5.0 & 6.0 only)
+### Schur Complement (6.0 only)
 
 Given a partitioned matrix `M = [A B; C D]`, the Schur complement of `A` in `M` is `S = D-CA⁻¹B`.
 This can be found with the function `schur_complement` with the following signatures:
@@ -274,7 +274,7 @@ get_perm(ps)
 set_perm!(ps, perm) # Perm is a Vector{Int}
 ```
 
-### Schur Complement (5.0 & 6.0 only)
+### Schur Complement (6.0 only)
 
 The `pardiso(ps,...)` syntax can be used to compute the Schur compelement (as described below). The answer can be retrieved with `pardisogetschur(ps)`.
 
