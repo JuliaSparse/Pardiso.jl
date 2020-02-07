@@ -1,21 +1,42 @@
 # Pardiso.jl
 
-The Pardiso.jl package provides an interface for using [PARDISO 5.0 and 6.0](http://www.pardiso-project.org/) and [Intel MKL PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia language](http://julialang.org). You cannot use `Pardiso.jl` without either having a valid license for PARDISO or having the MKL library installed. This package is available free of charge and in no way replaces or alters any functionality of the linked libraries.
+The Pardiso.jl package provides an interface for using [PARDISO
+6.0](http://www.pardiso-project.org/) and [Intel MKL
+PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia
+language](http://julialang.org). You cannot use `Pardiso.jl` without either
+having a valid license for PARDISO or having the MKL library installed. This
+package is available free of charge and in no way replaces or alters any
+functionality of the linked libraries.
 
 ## Installation
 
-The package itself is installed with `Pkg.add("Pardiso")` but you also need to follow the installation instructions below to install a working PARDISO library.
+The package itself is installed with `Pkg.add("Pardiso")` but you also need to
+follow the installation instructions below to install a working PARDISO
+library.
 
 ### MKL PARDISO
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started) for a thorough guide how to set this variable correctly, typically done by executing something like `source /opt/intel/bin/compilervars.sh intel64`.
+By default Julia, will automatically install a suitable MKL for your platform.
+If you rather use a self installed MKL follow these instructions:
+
+* Set the `MKLROOT` environment variable. See the [MKL getting started
+  manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started)
+  for a thorough guide how to set this variable correctly, typically done by
+  executing something like `source /opt/intel/mkl/bin/mklvars.sh intel64` or
+  running `"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64`
 * Run `Pkg.build("Pardiso")`
-* Run `Pardiso.show_build_log()` to see the build log for additional information.
+* Run `Pardiso.show_build_log()` to see the build log for additional
+  information.
+* Note that the `MKLROOT` environment variable must be set whenever using the library.
+
+This package is tested with MKL 2020.
 
 ### PARDISO
 
-* Put the PARDISO library `libpardisoX00-WIN-X86-64.dll`, `libpardisoX00-GNUXXX-X86-64.so` or `libpardisoX00-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
-  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the `.julia/config/startup.jl` file and download the Pardiso library to that folder.
+* Put the PARDISO library `libpardiso600-WIN-X86-64.dll`, `libpardiso600-GNUXXX-X86-64.so` or
+  `libpardiso600-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
+  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the
+  `.julia/config/startup.jl` file and download the Pardiso library to that folder.
 * Perform the platform specific steps below
 * Run `Pkg.build("Pardiso")`
 * Run `Pardiso.show_build_log()` to see the build log for additional information.
@@ -26,29 +47,13 @@ The package itself is installed with `Pkg.add("Pardiso")` but you also need to f
 * Make sure OpenMP is installed.
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself), using for example [OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/Precompiled-installation-packages)
 
-##### Special macOS instructions for Pardiso version 5.0
-
-The following (exact) paths need to exist:
-
-* `/usr/local/lib/libgfortran.3.dylib`
-* `/usr/local/lib/libgomp.1.dylib`
-* `/usr/local/lib/libquadmath.0.dylib`
-
-If these do not exist, you can create symlinks from the current location of the libraries.
-If you are using homebrew, these libraries exist in the gcc installation at e.g. `/usr/local/Cellar/gcc/7.2.0/lib/gcc/7`.
-Creating a symlink would then look like:
-
-```
-ln -s /usr/local/Cellar/gcc/7.2.0/lib/gcc/7/libgfortran.dylib /usr/local/lib/libgfortran.3.dylib
-```
-
 ## Basic Usage
 
 This section will explain how to solve equations using `Pardiso.jl` with the default settings of the library. For more advanced users there is a section further down.
 
 ## Creating the PardisoSolver
 
-A `PardisoSolver` is created with `PardisoSolver()` for solving with PARDISO 5.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
+A `PardisoSolver` is created with `PardisoSolver()` for solving with PARDISO 6.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
 
 ### Solving
 

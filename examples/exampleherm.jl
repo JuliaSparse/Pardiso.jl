@@ -1,6 +1,9 @@
 # This is an example script demonstrating how PARDISO works on a
 # medium-sized Hermitian positive definite matrix.
 using Pardiso
+using LinearAlgebra # for norm
+using SparseArrays
+using Random
 
 # Script parameters.
 # -----------------
@@ -10,13 +13,14 @@ lambda  = 3
 
 # Create the Hermitian positive definite matrix A and the vector b in the
 # linear system Ax = b.
-e = ones(n,1)
-e2 = ones(n-1,1)
-A = spdiagm((im*e2, lambda*e, -im*e2), (-1,0,1))
-b = rand(n,1) + im * zeros(n,1)
+e = ones(n)
+e2 = ones(n-1)
+A = spdiagm(-1 => im*e2, 0 => lambda*e, 1 => -im*e2)
+b = rand(n) + im * zeros(n)
 
 # Initialize the PARDISO internal data structures.
-ps = PardisoSolver()
+# ps = PardisoSolver()
+ps = MKLPardisoSolver()
 
 if verbose
     set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
@@ -56,6 +60,7 @@ pardiso(ps, x, A_pardiso, b)
 # Compute the residuals.
 r = abs.(A*x - b)
 @printf("The maximum residual for the solution is %0.3g.\n",maximum(r))
+@test norm(R) < 1e-10
 
 # Free the PARDISO data structures.
 set_phase!(ps, Pardiso.RELEASE_ALL)

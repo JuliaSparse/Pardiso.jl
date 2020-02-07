@@ -37,11 +37,6 @@ function PardisoSolver()
     ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
                   phase, msglvl, maxfct, mnum, perm)
 
-    finalizer(ps) do ps
-        set_phase!(ps, Pardiso.RELEASE_ALL)
-        pardiso(ps)
-    end
-
     return ps
 end
 
@@ -68,28 +63,6 @@ function set_solver!(ps::PardisoSolver, v::Solver)
     ps.solver = v
 end
 get_solver(ps::PardisoSolver) = ps.solver
-
-
-function get_matrix(ps::PardisoSolver, A, T)
-    mtype = get_matrixtype(ps)
-
-    if isposornegdef(mtype)
-        T == :T && return tril(A)
-        return conj(tril(A))
-    end
-
-     if !issymmetric(mtype)
-        T == :C && return conj(A)
-        return A
-    end
-
-    if mtype == COMPLEX_SYM
-        T == :C && return conj(tril(A))
-        return tril(A)
-    end
-
-    error("Unhandled matrix type")
-end
 
 @inline function ccall_pardisoinit(ps::PardisoSolver)
     ERR = Ref{Int32}(0)

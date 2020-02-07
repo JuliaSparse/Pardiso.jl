@@ -7,24 +7,21 @@ using SparseArrays
 
 Random.seed!(1234)
 
-psolvers = DataType[]
-
-Pardiso.MKL_PARDISO_LOADED[] && push!(psolvers, MKLPardisoSolver)
-Pardiso.PARDISO_LOADED[]     && push!(psolvers, PardisoSolver)
+psolvers = [MKLPardisoSolver]
+if Pardiso.PARDISO_LOADED[]
+    push!(psolvers, PardisoSolver)
+else
+    @warn "Not testing project Pardiso solver"
+end
 
 println("Testing ", psolvers)
-
-if length(psolvers) == 0
-    error("No Pardiso library managed to load. Unable to run tests.")
-end
 
 # Test solver + for real and complex data
 @testset "solving" begin
 for pardiso_type in psolvers
+    ps = pardiso_type()
+    pardisoinit(ps)
     for T in (Float64, ComplexF64)
-        ps = pardiso_type()
-        pardisoinit(ps)
-
         if T == Float64
             set_matrixtype!(ps, 11)
         else
@@ -59,6 +56,23 @@ for pardiso_type in psolvers
     end
 end
 end #testset
+
+@testset "examples" begin
+    include("../examples/exampleunsym.jl")
+    include("../examples/examplesym.jl")
+    include("../examples/exampleherm.jl")
+end
+
+if Sys.CPU_THREADS >= 4
+    @testset "procs" begin
+        ps = MKLPardisoSolver()
+        np = get_nprocs(ps)
+        set_nprocs!(ps, 2)
+        @test get_nprocs(ps) == 2
+        set_nprocs!(ps, np)
+        @test get_nprocs(ps) == np
+    end
+end
 
 @testset "error checks" begin
 for pardiso_type in psolvers
