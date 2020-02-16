@@ -50,9 +50,13 @@ for pardiso_type in psolvers
 end
 end #testset
 
-@testset "examples" begin
+module ExampleUnsym
     include("../examples/exampleunsym.jl")
+end
+module ExampleSym
     include("../examples/examplesym.jl")
+end
+module ExampleHerm
     include("../examples/exampleherm.jl")
 end
 
