@@ -8,12 +8,15 @@
 # n x m matrix, and X is another n x m matrix.
 using Pardiso
 using SparseArrays
+using Random
+using Printf
 using Test
 
+# Script parameters.
+# -----------------
 verbose = false
-
-n = 4  # The number of equations.
-m = 3  # The number of right-hand sides.
+n       = 4  # The number of equations.
+m       = 3  # The number of right-hand sides.
 
 A = sparse([ 1. 0 -2  3
              0  5  1  2
@@ -38,11 +41,18 @@ X1 = solve(ps, A, B)
 
 # We also show how to do this in incremental steps.
 
+# ps = PardisoSolver()
+ps = MKLPardisoSolver()
+
 # First set the matrix type to handle general real symmetric matrices
 set_matrixtype!(ps, Pardiso.REAL_SYM_INDEF)
 
 # Initialize the default settings with the current matrix type
 pardisoinit(ps)
+
+# Remember that we pass in a CSC matrix to Pardiso, so need
+# to set the transpose iparm option.
+fix_iparm!(ps, :N)
 
 # Get the correct matrix to be sent into the pardiso function.
 # :N for normal matrix, :T for transpose, :C for conjugate

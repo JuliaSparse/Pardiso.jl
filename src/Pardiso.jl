@@ -44,6 +44,7 @@ export checkmatrix, checkvec, printstats, pardisoinit, pardiso
 export solve, solve!
 export get_matrix
 export schur_complement, pardisogetschur
+export fix_iparm!
 
 struct PardisoException <: Exception
     info::String
@@ -205,17 +206,18 @@ function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
   return X
 end
 
-function fix_iparm!(ps, T)
+function fix_iparm!(ps::AbstractPardisoSolver, T::Symbol)
     # We need to set the transpose flag in PARDISO when we DON'T want
     # a transpose in Julia because we are passing a CSC formatted
     # matrix to PARDISO which expects a CSR matrix.
-    if T == :N
+    if T === :N
         if isa(ps, PardisoSolver)
             set_iparm!(ps, 12, 1)
         else
+            # iparm[12] = 1 is complex conjugate in MKL
             set_iparm!(ps, 12, 2)
         end
-    elseif T == :C || T == :T
+    elseif T === :C || T === :T
         set_iparm!(ps, 12, 0)
     else
         throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
@@ -238,15 +240,7 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
         pardisoinit(ps)
         fix_iparm!(ps, T)
         try
-            if typeof(ps) == PardisoSolver
-                   pardiso(ps, X, get_matrix(ps, A, T), B)
-            else
-                # Workaround for #3
-                if eltype(A) == ComplexF64
-                    throw(PardisoPosDefException(""))
-                end
-                pardiso(ps, X, get_matrix(ps, A, T), B)
-            end
+            pardiso(ps, X, get_matrix(ps, A, T), B)
         catch e
             set_phase!(ps, RELEASE_ALL)
             pardiso(ps, X, A, B)

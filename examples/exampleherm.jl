@@ -2,8 +2,10 @@
 # medium-sized Hermitian positive definite matrix.
 using Pardiso
 using LinearAlgebra # for norm
+using Printf
 using SparseArrays
 using Random
+using Test
 
 # Script parameters.
 # -----------------
@@ -31,12 +33,21 @@ end
 # solve the system and free the data
 X1 = solve(ps, A, b)
 
+# We also show how to do this in incremental steps.
+
+# ps = PardisoSolver()
+ps = MKLPardisoSolver()
+
 # First set the matrix type to handle general complex
 # hermitian positive definite matrices
 set_matrixtype!(ps, Pardiso.COMPLEX_HERM_POSDEF)
 
 # Initialize the default settings with the current matrix type
 pardisoinit(ps)
+
+# Remember that we pass in a CSC matrix to Pardiso, so need
+# to set the transpose iparm option.
+fix_iparm!(ps, :N)
 
 # Get the correct matrix to be sent into the pardiso function.
 # :N for normal matrix, :T for transpose, :C for conjugate
@@ -60,7 +71,7 @@ pardiso(ps, x, A_pardiso, b)
 # Compute the residuals.
 r = abs.(A*x - b)
 @printf("The maximum residual for the solution is %0.3g.\n",maximum(r))
-@test norm(R) < 1e-10
+@test norm(r) < 1e-10
 
 # Free the PARDISO data structures.
 set_phase!(ps, Pardiso.RELEASE_ALL)
