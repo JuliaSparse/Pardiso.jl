@@ -238,15 +238,7 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
         pardisoinit(ps)
         fix_iparm!(ps, T)
         try
-            if typeof(ps) == PardisoSolver
-                   pardiso(ps, X, get_matrix(ps, A, T), B)
-            else
-                # Workaround for #3
-                if eltype(A) == ComplexF64
-                    throw(PardisoPosDefException(""))
-                end
-                pardiso(ps, X, get_matrix(ps, A, T), B)
-            end
+            pardiso(ps, X, get_matrix(ps, A, T), B)
         catch e
             set_phase!(ps, RELEASE_ALL)
             pardiso(ps, X, A, B)
