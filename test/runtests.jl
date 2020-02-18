@@ -15,6 +15,8 @@ else
     @warn "Not testing project Pardiso solver"
 end
 
+@show Pardiso.MklInt
+
 println("Testing ", psolvers)
 
 # Test solver + for real and complex data

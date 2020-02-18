@@ -13,3 +13,10 @@ branches:
     - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 notifications:
   email: false
+script:
+    - julia --project -e 'import Pkg; Pkg.build(); Pkg.test(coverage=true)'
+    - julia --project="" -e 'using Pkg; Pkg.add([
+        PackageSpec(url="https://github.com/JuliaLang/PackageCompiler.jl", rev="master"),
+        PackageSpec(url="https://github.com/JuliaComputing/MKL.jl", rev="kc/mkl_jll_packagecompiler"),
+        ])'
+    - julia --project -e 'import Pkg; Pkg.build(); Pkg.test(coverage=true)'
