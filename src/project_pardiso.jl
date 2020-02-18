@@ -76,7 +76,7 @@ end
 
 
 @inline function ccall_pardiso(ps::PardisoSolver, N::Integer, nzval::Vector{Tv},
-                                   colptr, rowval, NRHS::Int32, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
+                                   colptr, rowval, NRHS::Integer, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
     N = Int32(N)
     colptr = convert(Vector{Int32}, colptr)
     rowval = convert(Vector{Int32}, rowval)
