@@ -115,9 +115,13 @@ function __init__()
         @warn "MKLROOT not set, MKL Pardiso solver will not be functional"
     end
 
+    # This is apparently needed for MKL to not get stuck on 1 thread when
+    # libpardiso is loaded in the block below...
+    get_nprocs_mkl()
+
     if PARDISO_LIB_FOUND
         try
-            libpardiso = Libdl.dlopen(PARDISO_PATH, Libdl.RTLD_GLOBAL)
+            libpardiso = Libdl.dlopen(PARDISO_PATH)
             init[] = Libdl.dlsym(libpardiso, "pardisoinit")
             pardiso_f[] = Libdl.dlsym(libpardiso, "pardiso")
             pardiso_chkmatrix[] = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")
