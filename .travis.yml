@@ -15,7 +15,7 @@ notifications:
   email: false
 script:
     - julia --project -e 'import Pkg; Pkg.build(); Pkg.test(coverage=true)'
-    - julia --project="" -e 'using Pkg; Pkg.add([
+    - travis_wait julia --project="" -e 'using Pkg; Pkg.add([
         PackageSpec(url="https://github.com/JuliaLang/PackageCompiler.jl", rev="master"),
         PackageSpec(url="https://github.com/JuliaComputing/MKL.jl", rev="kc/mkl_jll_packagecompiler"),
         ])'
