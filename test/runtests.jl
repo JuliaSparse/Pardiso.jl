@@ -9,11 +9,7 @@ using LinearAlgebra
 Random.seed!(1234)
 
 psolvers = [MKLPardisoSolver]
-if Pardiso.PARDISO_LOADED[]
-    push!(psolvers, PardisoSolver)
-else
-    @warn "Not testing project Pardiso solver"
-end
+push!(psolvers, PardisoSolver)
 
 @show Pardiso.MklInt
 

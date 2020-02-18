@@ -2,6 +2,8 @@ __precompile__()
 
 module Pardiso
 
+using Pkg.Artifacts
+
 if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
 end
@@ -114,6 +116,22 @@ const pardiso_chkvec_z = Ref{Ptr}()
 const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
+if Sys.iswindows()
+    const libpardiso_path = joinpath(artifact"libpardiso600-WIN-X86-64-MINGW",
+                               "libpardiso600-WIN-X86-64-MINGW.dll")
+elseif Sys.isapple()
+    const libpardiso_path = joinpath(artifact"libpardiso600-MACOS-X86-64",
+                               "libpardiso600-MACOS-X86-64.dylib")
+elseif Sys.islinux()
+    const libpardiso_path = joinpath(artifact"libpardiso600-GNU720-X86-64",
+                               "libpardiso600-GNU720-X86-64.so")
+else
+    const libpardiso_path = nothing
+end
+
+# const libpardiso_path = "/Users/kristoffercarlsson/Downloads/libpardiso600-MACOS-X86-64.dylib"
+
+
 function __init__()
     if !haskey(ENV, "PARDISOLICMESSAGE")
         ENV["PARDISOLICMESSAGE"] = 1
@@ -127,9 +145,10 @@ function __init__()
     # libpardiso is loaded in the block below...
     get_nprocs_mkl()
 
-    if PARDISO_LIB_FOUND
+    if libpardiso_path !== nothing
         try
-            libpardiso = Libdl.dlopen(PARDISO_PATH)
+            libpardiso = Libdl.dlopen(libpardiso_path)
+            @show libpardiso
             init[] = Libdl.dlsym(libpardiso, "pardisoinit")
             pardiso_f[] = Libdl.dlsym(libpardiso, "pardiso")
             pardiso_chkmatrix[] = Libdl.dlsym(libpardiso, "pardiso_chkmatrix")

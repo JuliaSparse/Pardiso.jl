@@ -1,0 +1,26 @@
+[[libpardiso600-WIN-X86-64-MINGW]]
+git-tree-sha1 = "09b048312ce5f565202d6e4ee6dceca55545bf95"
+os = "windows"
+arch = "x86_64"
+
+    [[libpardiso600-WIN-X86-64-MINGW.download]]
+    sha256 = "07b9c8a5d97edc48be1507f62c6ab7d69f2f1f372e4da90d2b5843caf2688c73"
+    url = "https://github.com/JuliaComputing/PackageCompilerX.jl/releases/download/v0.1/x86_64-8.1.0-release-posix-seh-rt_v6-rev0.tar.gz"
+
+[[libpardiso600-MACOS-X86-64]]
+git-tree-sha1 = "cde64a92668d294ea9105e839b508a2c0721cdff"
+os = "macos"
+arch = "x86_64"
+
+    [[libpardiso600-MACOS-X86-64.download]]
+    sha256 = "67f4ffef0f73322e54c7bba338a0d9c7310a642710780b0d85141e2d72cc15f9"
+    url = "https://github.com/JuliaSparse/Pardiso.jl/releases/download/v0.5.1/libpardiso600-MACOS-X86-64.tar.gz"
+
+[[libpardiso600-GNU720-X86-64]]
+git-tree-sha1 = "dfc4495cf602e106e67abe3abbe00eb88ead317f"
+os = "linux"
+arch = "x86_64"
+
+    [[libpardiso600-GNU720-X86-64.download]]
+    sha256 = "2fe76ef7e0f7aa1d57b68aed398843ebe2715ec96bdbb58ecaaff71d9088c04f"
+    url = "https://github.com/JuliaSparse/Pardiso.jl/releases/download/v0.5.1/libpardiso600-GNU720-X86-64.tar.gz"
