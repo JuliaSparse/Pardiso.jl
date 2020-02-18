@@ -75,8 +75,14 @@ get_solver(ps::PardisoSolver) = ps.solver
 end
 
 
-@inline function ccall_pardiso(ps::PardisoSolver, N::Int32, AA::Vector{Tv},
-                                   IA, JA, NRHS::Int32, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
+@inline function ccall_pardiso(ps::PardisoSolver, N::Integer, nzval::Vector{Tv},
+                                   colptr, rowval, NRHS::Integer, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
+    N = Int32(N)
+    colptr = convert(Vector{Int32}, colptr)
+    rowval = convert(Vector{Int32}, rowval)
+    resize!(ps.perm, size(B, 1))
+    NRHS = Int32(NRHS)
+
     ERR = Ref{Int32}(0)
     ccall(pardiso_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
@@ -84,7 +90,7 @@ end
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
           ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
-          Ref(N), AA, IA, JA, ps.perm,
+          Ref(N), nzval, colptr, rowval, ps.perm,
           Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
           ERR, ps.dparm)
     check_error(ps, ERR[])

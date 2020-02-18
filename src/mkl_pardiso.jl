@@ -2,26 +2,26 @@ const MKL_DOMAIN_PARDISO = Int32(4)
 
 mutable struct MKLPardisoSolver <: AbstractPardisoSolver
     pt::Vector{Int}
-    iparm::Vector{Int32}
+    iparm::Vector{MklInt}
     mtype::MatrixType
     solver::Solver
     phase::Phase
     msglvl::MessageLevel
-    maxfct::Int32
-    mnum::Int32
-    perm::Vector{Int32}
+    maxfct::MklInt
+    mnum::MklInt
+    perm::Vector{MklInt}
 end
 
 function MKLPardisoSolver()
     pt = zeros(Int, 64)
-    iparm = zeros(Int32, 64)
+    iparm = zeros(MklInt, 64)
     mtype = REAL_NONSYM
     solver = DIRECT_SOLVER
     phase = ANALYSIS_NUM_FACT_SOLVE_REFINE
     msglvl = MESSAGE_LEVEL_OFF
-    mnum = 1
-    maxfct = 1
-    perm = Int32[]
+    mnum = MklInt(1)
+    maxfct = MklInt(1)
+    perm = MklInt[]
 
     ps = MKLPardisoSolver(pt, iparm, mtype, solver,
                       phase, msglvl, maxfct, mnum, perm)
@@ -43,28 +43,34 @@ valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
 function ccall_pardisoinit(ps::MKLPardisoSolver)
-    ERR = Ref{Int32}(0)
+    ERR = Ref{MklInt}(0)
     ccall((:pardisoinit, libmkl_rt), Cvoid,
-          (Ptr{Int}, Ptr{Int32}, Ptr{Int32}),
-          ps.pt, Ref(Int32(ps.mtype)), ps.iparm)
+          (Ptr{Int}, Ptr{MklInt}, Ptr{MklInt}),
+          ps.pt, Ref(MklInt(ps.mtype)), ps.iparm)
     check_error(ps, ERR[])
 end
 
-
-function ccall_pardiso(ps::MKLPardisoSolver, N, AA::Vector{Tv}, IA, JA,
+function ccall_pardiso(ps::MKLPardisoSolver, N, nzval::Vector{Tv}, colptr, rowval,
                        NRHS, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
-    ERR = Ref{Int32}(0)
-    ccall((:pardiso, libmkl_rt), Cvoid,
-          (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Tv}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32},
-           Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
-           Ptr{Int32}),
-          ps.pt, Ref(ps.maxfct), Ref(ps.mnum), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
-          Ref(N), AA, IA, JA, ps.perm,
-          Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
+    N = MklInt(N)
+    colptr = convert(Vector{MklInt}, colptr)
+    rowval = convert(Vector{MklInt}, rowval)
+    resize!(ps.perm, size(B, 1))
+    NRHS = MklInt(NRHS)
+
+    ERR = Ref{MklInt}(0)
+    ccall((PARDISO_FUNC, libmkl_rt), Cvoid,
+          (Ptr{Int}, Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt},
+           Ptr{MklInt}, Ptr{Tv}, Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt},
+           Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt}, Ptr{Tv}, Ptr{Tv},
+           Ptr{MklInt}),
+          ps.pt, Ref(ps.maxfct), Ref(ps.mnum), Ref(MklInt(ps.mtype)), Ref(MklInt(ps.phase)),
+          Ref(N), nzval, colptr, rowval, ps.perm,
+          Ref(NRHS), ps.iparm, Ref(MklInt(ps.msglvl)), B, X,
           ERR)
     check_error(ps, ERR[])
 end
+
 
 function check_error(ps::MKLPardisoSolver, err::Integer)
     err != -1  || throw(PardisoException("Input inconsistent."))
@@ -81,4 +87,3 @@ function check_error(ps::MKLPardisoSolver, err::Integer)
     err != -12 || throw(PardisoException("pardiso_64 called from 32-bit library"))
     return
 end
-

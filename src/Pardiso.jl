@@ -26,6 +26,14 @@ if !LOCAL_MKL_FOUND
     import MKL_jll
 end
 
+if LinearAlgebra.BLAS.vendor() === :mkl && LinearAlgebra.BlasInt == Int64
+    const MklInt = Int64
+    const PARDISO_FUNC = :pardiso_64
+else
+    const MklInt = Int32
+    const PARDISO_FUNC = :pardiso
+end
+
 if Sys.iswindows()
     const libmkl_rt = "mkl_rt"
 elseif Sys.isapple()
@@ -316,7 +324,7 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
                                     "has a complex matrix type set: $(get_matrixtype(ps))")))
     end
 
-    N = Int32(size(A, 2))
+    N = size(A, 2)
 
     AA = A.nzval
     IA = convert(Vector{Int32}, A.colptr)
@@ -324,9 +332,9 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
 
     resize!(ps.perm, size(B, 1))
 
-    NRHS = Int32(size(B, 2))
+    NRHS = size(B, 2)
 
-    ccall_pardiso(ps, N, AA, IA, JA, NRHS, B, X)
+    ccall_pardiso(ps, N, A.nzval, A.colptr, A.rowval, NRHS, B, X)
 end
 
 pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, Int32(0), Float64[], Int32[], Int32[], Int32(0), Float64[], Float64[])
