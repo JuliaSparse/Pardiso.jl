@@ -13,6 +13,9 @@ branches:
     - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 notifications:
   email: false
+cache:
+  directories:
+  - $HOME/.julia/artifacts
 script:
     - julia --project -e 'import Pkg; Pkg.build(); Pkg.test(coverage=true)'
     - travis_wait julia --project="" -e 'using Pkg; Pkg.add([
