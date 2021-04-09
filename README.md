@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/JuliaSparse/Pardiso.jl.svg?branch=master)](https://travis-ci.org/JuliaSparse/Pardiso.jl)
 
 The Pardiso.jl package provides an interface for using [PARDISO
-6.0](http://www.pardiso-project.org/) and [Intel MKL
+6.0, 7.2](http://www.pardiso-project.org/) and [Intel MKL
 PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia
 language](http://julialang.org). You cannot use `Pardiso.jl` without either
 having a valid license for PARDISO or having the MKL library installed. This
@@ -31,19 +31,20 @@ If you rather use a self installed MKL follow these instructions:
   information.
 * Note that the `MKLROOT` environment variable must be set whenever using the library.
 
-### PARDISO 6.0
+### PARDISO from [pardiso-project.org](https://pardiso-project.org) ("ProjectPardiso")
 
-* Put the PARDISO library `libpardiso600-WIN-X86-64.dll`, `libpardiso600-GNUXXX-X86-64.so` or 
-  `libpardiso600-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
+
+* Put the PARDISO library `libpardisoVVV-WIN-X86-64.dll`, `libpardisoVVV-GNUXXX-X86-64.so` or 
+  `libpardisoVVV-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
   For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the
   `.julia/config/startup.jl` file and download the Pardiso library to that folder.
 * Perform the platform specific steps below
 * Run `Pkg.build("Pardiso")`
 * Run `Pardiso.show_build_log()` to see the build log for additional information.
 
-Note: Weird errors and problems with MKL Pardiso has been observed when Pardiso 6.0 is enabled
-(likely because some library that is needed by Pardiso 6.0 is problematic with MKL).
-If you want to use MKL Pardiso it is better ot just disable Paridso 6.0 by not setting
+Note: Weird errors and problems with MKL Pardiso has been observed when ProjectPardiso is enabled
+(likely because some library that is needed by  ProjectPardiso is problematic with MKL).
+If you want to use MKL Pardiso it is better ot just disable  ProjectParidso by not setting
 the environment variable `JULIA_PARDISO` (and rerunning `build Pardiso`).
 
 ##### Linux / macOS specific
@@ -52,13 +53,24 @@ the environment variable `JULIA_PARDISO` (and rerunning `build Pardiso`).
 * Make sure OpenMP is installed.
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself), using for example [OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/Precompiled-installation-packages)
 
+`gfortran` and OpenMP usually come with recent version of gcc/gfortran. On Linux, ProjectPardiso
+looks for libraries `libgfortran.so` and `libgomp.so` . They may be named differently on your system.
+In this situation you may try to create links to them with names known to
+`Pardiso.jl` (bash; pathnames serve as examples here):
+````
+$ mkdir $HOME/extralibs
+$ ln -s /usr/lib64/libgomp.so.1 $HOME/extralibs/libgomp.so
+$ ln -s /usr/lib64/libgfortran.so.5 $HOME/extralibs/libgfortran.so
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/extralibs/
+````
+
 ## Basic Usage
 
 This section will explain how to solve equations using `Pardiso.jl` with the default settings of the library. For more advanced users there is a section further down.
 
 ## Creating the PardisoSolver
 
-A `PardisoSolver` is created with `PardisoSolver()` for solving with PARDISO 6.0 or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
+A `PardisoSolver` is created with `PardisoSolver()` for solving with ProjectPardiso or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
 
 ### Solving
 
@@ -97,7 +109,7 @@ julia> X
  -1.17295    8.47922
 ```
 
-### Schur Complement (6.0 only)
+### Schur Complement (ProjectPardiso only)
 
 Given a partitioned matrix `M = [A B; C D]`, the Schur complement of `A` in `M` is `S = D-CA⁻¹B`.
 This can be found with the function `schur_complement` with the following signatures:
@@ -144,7 +156,7 @@ At present there seems to be an instability in the Schur complement computation 
 
 ### Setting the number of threads
 
-The number of threads to use is set in different ways for MKL PARDISO and PARDISO 6.0.
+The number of threads to use is set in different ways for MKL PARDISO and ProjectPardiso.
 
 #### MKL PARDISO
 
@@ -153,7 +165,7 @@ set_nprocs!(ps, i) # Sets the number of threads to use
 get_nprocs(ps) # Gets the number of threads being used
 ```
 
-#### PARDISO 6.0
+#### ProjectPardiso
 
 The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
 
@@ -163,7 +175,7 @@ The number of threads used by a `PardisoSolver` can be retrieved with `get_nproc
 
 This section discusses some more advanced usage of `Pardiso.jl`.
 
-For terminology in this section please refer to the [PARDISO 6.0 manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
+For terminology in this section please refer to the [ProjectPardiso manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
 
 After using functionality in this section, calls should no longer be made to the `solve` functions but instead directly to the function
 
@@ -195,8 +207,8 @@ The matrix type can be explicitly set with `set_matrixtype!(ps, key)` where the 
 
 The matrix type for a solver can be retrieved with `get_matrixtype(ps)`.
 
-### Setting the solver (6.0 only)
-PARDISO 6.0 supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
+### Setting the solver (ProjectPardiso only)
+ProjectPardiso supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
 
 | enum               | integer | Solver                           |
 |--------------------|---------|----------------------------------|
@@ -224,7 +236,7 @@ Depending on the phase calls to `solve` (and `pardiso` which is mentioned later)
 | RELEASE_ALL                           | -1      | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
-Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (6.0 only) parameters.
+Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (ProjectPardiso only) parameters.
 This can be done with the getters and setters:
 
 ```jl
@@ -232,7 +244,7 @@ get_iparm(ps, i) # Gets IPARM[i]
 get_iparms(ps) # Gets IPARM
 set_iparm!(ps, i, v) # Sets IPARM[i] = v
 
-# 6.0 only
+# ProjectPardiso only
 get_dparm(ps, i) # Gets DPARM[i]
 get_dparms(ps) # Gets DPARM
 set_dparm!(ps, i, v) # Sets DPARM[i] = v
@@ -251,7 +263,7 @@ It is possible for Pardiso to print out timings and statistics when solving. Thi
 
 ### Matrix and vector checkers
 
-PARDISO 6.0 comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
+ProjectPardiso comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
 
 ```jl
 printstats(ps, A, B)
@@ -276,7 +288,7 @@ get_perm(ps)
 set_perm!(ps, perm) # Perm is a Vector{Int}
 ```
 
-### Schur Complement (6.0 only)
+### Schur Complement (ProjectPardiso only)
 
 The `pardiso(ps,...)` syntax can be used to compute the Schur compelement (as described below). The answer can be retrieved with `pardisogetschur(ps)`.
 

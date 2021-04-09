@@ -156,7 +156,6 @@ function __init__()
                     if ptr !== C_NULL
                         break
                     end
-                end
                 if ptr == C_NULL
                     error("could not load blas library")
                 end
@@ -252,7 +251,18 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
         pardisoinit(ps)
         fix_iparm!(ps, T)
         try
+            if isa(ps,PardisoSolver)
+                # Pardiso7 does not report an error when A is not positive definite,
+                # but nevertheless does not touch X. 
+                h=hash(X)
+            end
             pardiso(ps, X, get_matrix(ps, A, T), B)
+            if isa(ps,PardisoSolver)
+                if hash(X)==h
+                    # Pardiso7 remedy.
+                    throw(PardisoPosDefException("Matrix probably not positive definite"))
+                end
+            end
         catch e
             set_phase!(ps, RELEASE_ALL)
             pardiso(ps, X, A, B)
