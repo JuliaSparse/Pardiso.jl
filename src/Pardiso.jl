@@ -34,13 +34,7 @@ else
     const PARDISO_FUNC = :pardiso
 end
 
-if Sys.iswindows()
-    const libmkl_rt = "mkl_rt"
-elseif Sys.isapple()
-    const libmkl_rt = "@rpath/libmkl_rt.dylib"
-else
-    const libmkl_rt = "libmkl_rt"
-end
+const libmkl_rt = Ref{String}("")
 
 export PardisoSolver, MKLPardisoSolver
 export set_iparm!, set_dparm!, set_matrixtype!, set_solver!, set_phase!, set_msglvl!, set_nprocs!
@@ -115,6 +109,13 @@ const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
+    if Sys.iswindows()
+        libmkl_rt[] = "mkl_rt"
+    elseif Sys.isapple()
+        libmkl_rt[] = "@rpath/libmkl_rt.dylib"
+    else
+        libmkl_rt[] = MKL_jll.libmkl_rt_path
+    end
     if !haskey(ENV, "PARDISOLICMESSAGE")
         ENV["PARDISOLICMESSAGE"] = 1
     end
