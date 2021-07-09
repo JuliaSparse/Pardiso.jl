@@ -144,14 +144,14 @@ function __init__()
             pardiso_chkvec[] = Libdl.dlsym(libpardiso, "pardiso_chkvec")
             pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
             pardiso_get_schur_f[] = Libdl.dlsym(libpardiso, "pardiso_get_schur")
-
+            
             if Sys.isunix()
                 gfortran_v = [8, 9]
                 for lib in ("libgfortran", "libgomp")
                     load_lib_fortran(lib, gfortran_v)
                 end
             end
-
+            
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
             if Sys.isunix()
@@ -161,9 +161,9 @@ function __init__()
                     if ptr !== C_NULL
                         break
                     end
-                end
-                if ptr == C_NULL
-                    error("could not load blas library")
+                    if ptr == C_NULL
+                        error("could not load blas library")
+                    end
                 end
             end
             PARDISO_LOADED[] = true
@@ -257,7 +257,18 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
         pardisoinit(ps)
         fix_iparm!(ps, T)
         try
+            if isa(ps,PardisoSolver)
+                # Pardiso7 does not report an error when A is not positive definite,
+                # but nevertheless does not touch X. 
+                h=hash(X)
+            end
             pardiso(ps, X, get_matrix(ps, A, T), B)
+            if isa(ps,PardisoSolver)
+                if hash(X)==h
+                    # Pardiso7 remedy.
+                    throw(PardisoPosDefException("Matrix probably not positive definite"))
+                end
+            end
         catch e
             set_phase!(ps, RELEASE_ALL)
             pardiso(ps, X, A, B)
