@@ -109,12 +109,16 @@ const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
-    if Sys.iswindows()
-        libmkl_rt[] = "mkl_rt"
-    elseif Sys.isapple()
-        libmkl_rt[] = "@rpath/libmkl_rt.dylib"
-    else
+    if !LOCAL_MKL_FOUND
         libmkl_rt[] = MKL_jll.libmkl_rt_path
+    else
+        if Sys.iswindows()
+            libmkl_rt[] = "mkl_rt"
+        elseif Sys.isapple()
+            libmkl_rt[] = "@rpath/libmkl_rt.dylib"
+        else
+            libmkl_rt[] = "libmkl_rt"
+        end
     end
     if !haskey(ENV, "PARDISOLICMESSAGE")
         ENV["PARDISOLICMESSAGE"] = 1
