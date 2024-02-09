@@ -2,10 +2,12 @@
 
 [![CI Testing](https://github.com/JuliaSparse/Pardiso.jl/workflows/CI/badge.svg)](https://github.com/JuliaSparse/Pardiso.jl/actions?query=workflow%3ACI+branch%3Amaster)
 
-The Pardiso.jl package provides an interface for using [PARDISO
-6.0, 7.2](http://www.pardiso-project.org/) and [Intel MKL
+The Pardiso.jl package provides an interface for using [Panua Pardiso](https://panua.ch/), it's predecessors from
+[pardiso-project.org](http://www.pardiso-project.org/), and [Intel MKL
 PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia
-language](http://julialang.org). You cannot use `Pardiso.jl` without either
+language](http://julialang.org).
+
+You cannot use `Pardiso.jl` without either
 having a valid license for PARDISO or having the MKL library installed. This
 package is available free of charge and in no way replaces or alters any
 functionality of the linked libraries.
@@ -31,10 +33,11 @@ If you rather use a self installed MKL follow these instructions:
   information.
 * Note that the `MKLROOT` environment variable must be set whenever using the library.
 
-### PARDISO from [pardiso-project.org](https://pardiso-project.org) ("ProjectPardiso")
+### PARDISO from [panua.ch](https://pardiso-project.org) ("ProjectPardiso")
 
-
-* Put the PARDISO library `libpardisoVVV-WIN-X86-64.dll`, `libpardisoVVV-GNUXXX-X86-64.so` or 
+* Unzip the download file `panua-pardiso-yyyymmdd-os.zip` to some folder and set the environment variable `JULIA_PARDISO`
+  to the `lib` subdirectory of this folder.
+* (Project-Pardiso 6.0): Put the PARDISO library `libpardisoVVV-WIN-X86-64.dll`, `libpardisoVVV-GNUXXX-X86-64.so` or 
   `libpardisoVVV-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
   For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the
   `.julia/config/startup.jl` file and download the Pardiso library to that folder.
@@ -44,7 +47,7 @@ If you rather use a self installed MKL follow these instructions:
 
 Note: Weird errors and problems with MKL Pardiso has been observed when ProjectPardiso is enabled
 (likely because some library that is needed by  ProjectPardiso is problematic with MKL).
-If you want to use MKL Pardiso it is better ot just disable  ProjectParidso by not setting
+If you want to use MKL Pardiso it is better ot just disable  ProjectPardiso by not setting
 the environment variable `JULIA_PARDISO` (and rerunning `build Pardiso`).
 
 ##### Linux / macOS specific
