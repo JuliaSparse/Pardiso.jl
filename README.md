@@ -19,6 +19,8 @@ library.
 ### MKL PARDISO
 
 By default Julia, will automatically install a suitable MKL for your platform.
+Note that if you use a mac you will need to pin `MKL_jll` to version 2022.
+
 If you rather use a self installed MKL follow these instructions:
 
 * Set the `MKLROOT` environment variable. See the [MKL getting started
@@ -33,7 +35,7 @@ If you rather use a self installed MKL follow these instructions:
 
 ### PARDISO 6.0
 
-* Put the PARDISO library `libpardiso600-WIN-X86-64.dll`, `libpardiso600-GNUXXX-X86-64.so` or 
+* Put the PARDISO library `libpardiso600-WIN-X86-64.dll`, `libpardiso600-GNUXXX-X86-64.so` or
   `libpardiso600-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
   For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the
   `.julia/config/startup.jl` file and download the Pardiso library to that folder.
@@ -128,8 +130,8 @@ which gives
 julia> S
 5×5 Array{Float64,2}:
   -0.121404    1.49473  -1.25965    7.40326    0.571538
- -19.4928     -7.71151  12.9496    -7.13646  -20.4194  
-   9.88029     3.35502  -7.2346     1.70651   13.9759  
+ -19.4928     -7.71151  12.9496    -7.13646  -20.4194
+   9.88029     3.35502  -7.2346     1.70651   13.9759
   -9.06094    -5.86454   7.44917   -2.54985   -9.17327
  -33.7006    -17.8323   20.2588   -19.5863   -37.6132
 ```

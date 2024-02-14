@@ -109,9 +109,9 @@ const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
-    if !LOCAL_MKL_FOUND
+    if MKL_jll.is_available()
         libmkl_rt[] = MKL_jll.libmkl_rt_path
-    else
+    elseif LOCAL_MKL_FOUND
         if Sys.iswindows()
             libmkl_rt[] = "mkl_rt"
         elseif Sys.isapple()
@@ -130,7 +130,9 @@ function __init__()
 
     # This is apparently needed for MKL to not get stuck on 1 thread when
     # libpardiso is loaded in the block below...
-    get_nprocs_mkl()
+    if libmkl_rt[] !== ""
+        get_nprocs_mkl()
+    end
 
     if PARDISO_LIB_FOUND
         try
