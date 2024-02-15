@@ -65,10 +65,10 @@ end #testset
 include("../examples/examplesym.jl")
 include("../examples/exampleunsym.jl")
 include("../examples/exampleherm.jl")
-if solver in available_solvers
-    example_symmetric(solver=solver)
-    example_unsymmetric(solver=solver)
-    example_hermitian_psd(solver=solver)
+for solver in available_solvers
+    example_symmetric(solver)
+    example_unsymmetric(solver)
+    example_hermitian_psd(solver)
 end
 
 if Pardiso.MKL_jll.is_available()
