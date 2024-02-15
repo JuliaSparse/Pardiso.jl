@@ -19,7 +19,7 @@ library.
 ### MKL PARDISO
 
 By default Julia, will automatically install a suitable MKL for your platform.
-Note that if you use a mac you will need to pin `MKL_jll` to version 2022.
+Note that if you use a mac you will need to pin `MKL_jll` to version 2023.
 
 If you rather use a self installed MKL follow these instructions:
 
