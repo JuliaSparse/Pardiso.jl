@@ -1,8 +1,8 @@
 ENV["OMP_NUM_THREADS"] = 2
 
 using Pkg
-if Sys.isapple() && !(Sys.ARCH == :aarch64)
-    Pkg.add("MKL_jll"; version = "2023")
+if Sys.isapple()
+    Pkg.add(name="MKL_jll"; version = "2023")
 end
 
 using Test
