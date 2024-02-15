@@ -5,10 +5,16 @@ using Pardiso
 using Random
 using SparseArrays
 using LinearAlgebra
+using MKL_jll
 
 Random.seed!(1234)
 
-psolvers = [MKLPardisoSolver]
+psolvers = empty([Pardiso.AbstractPardisoSolver])
+if MKL_jll.is_available()
+    push!(psolvers, MKLPardisoSolver)
+else
+    @warn "Not testing MKL Pardiso solver"
+end
 if Pardiso.PARDISO_LOADED[]
     push!(psolvers, PardisoSolver)
 else
@@ -52,24 +58,39 @@ for pardiso_type in psolvers
 end
 end #testset
 
-module ExampleUnsym
-    include("../examples/exampleunsym.jl")
+if MKL_jll.is_available()
+    module ExampleUnsym
+        include("../examples/exampleunsym.jl")
+    end
+    module ExampleSym
+        include("../examples/examplesym.jl")
+    end
+    module ExampleHerm
+        include("../examples/exampleherm.jl")
+    end
 end
-module ExampleSym
-    include("../examples/examplesym.jl")
-end
-module ExampleHerm
-    include("../examples/exampleherm.jl")
+if Pardiso.PARDISO_LOADED[]
+    module ExampleUnsym
+    include("../examples/exampleunsym_pardiso.jl")
+    end
+    module ExampleSym
+        include("../examples/examplesym_pardiso.jl")
+    end
+    module ExampleHerm
+        include("../examples/exampleherm_pardiso.jl")
+    end
 end
 
-if Sys.CPU_THREADS >= 4
-    @testset "procs" begin
-        ps = MKLPardisoSolver()
-        np = get_nprocs(ps)
-        set_nprocs!(ps, 2)
-        @test get_nprocs(ps) == 2
-        set_nprocs!(ps, np)
-        @test get_nprocs(ps) == np
+if MKL_jll.is_available()
+    if Sys.CPU_THREADS >= 4
+        @testset "procs" begin
+            ps = MKLPardisoSolver()
+            np = get_nprocs(ps)
+            set_nprocs!(ps, 2)
+            @test get_nprocs(ps) == 2
+            set_nprocs!(ps, np)
+            @test get_nprocs(ps) == np
+        end
     end
 end
 
