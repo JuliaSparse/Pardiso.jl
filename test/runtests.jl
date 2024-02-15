@@ -5,12 +5,11 @@ using Pardiso
 using Random
 using SparseArrays
 using LinearAlgebra
-using MKL_jll
 
 Random.seed!(1234)
 
 psolvers = empty([Pardiso.AbstractPardisoSolver])
-if MKL_jll.is_available()
+if Pardiso.MKL_jll.is_available()
     push!(psolvers, MKLPardisoSolver)
 else
     @warn "Not testing MKL Pardiso solver"
@@ -58,7 +57,7 @@ for pardiso_type in psolvers
 end
 end #testset
 
-if MKL_jll.is_available()
+if Pardiso.MKL_jll.is_available()
     module ExampleUnsym
         include("../examples/exampleunsym.jl")
     end
@@ -81,7 +80,7 @@ if Pardiso.PARDISO_LOADED[]
     end
 end
 
-if MKL_jll.is_available()
+if Pardiso.MKL_jll.is_available()
     if Sys.CPU_THREADS >= 4
         @testset "procs" begin
             ps = MKLPardisoSolver()
