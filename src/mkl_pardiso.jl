@@ -13,7 +13,7 @@ mutable struct MKLPardisoSolver <: AbstractPardisoSolver
 end
 
 function MKLPardisoSolver()
-    if !( LOCAL_MKL_FOUND || MKL_jll.is_available())
+    if !(LOCAL_MKL_FOUND || MKL_jll.is_available())
         error("MKL is not available no this platform")
     end
     pt = zeros(Int, 64)
