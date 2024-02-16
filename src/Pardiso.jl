@@ -26,7 +26,9 @@ if !LOCAL_MKL_FOUND
     import MKL_jll
 end
 
-mkl_is_available() = LOCAL_MKL_FOUND || MKL_jll.is_available()
+MKL_LOAD_FAILED = false
+
+mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED 
 
 if LinearAlgebra.BLAS.vendor() === :mkl && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
@@ -111,6 +113,7 @@ const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
+    global MKL_LOAD_FAILED
     if LOCAL_MKL_FOUND
         if Sys.iswindows()
             libmkl_rt[] = "mkl_rt"
@@ -137,6 +140,7 @@ function __init__()
             mklpardiso_f = Libdl.dlsym(libmklpardiso, "pardiso")
         catch e
             @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
+            MKL_LOAD_FAILED = true
         end
     end
     
