@@ -68,10 +68,10 @@ println("\nMKL Pardiso")
 println("=============")
 function find_mklparadiso()
     if haskey(ENV, "MKLROOT")
-        println("found MKLROOT environment varaible, enabling local MKL")
+        println("found MKLROOT environment variable, enabling local MKL")
         return true
     end
-    println("did not find MKLROOT environment variable, using provided MKL")
+    println("did not find MKLROOT environment variable, using MKL_jll")
     return false
 end
 

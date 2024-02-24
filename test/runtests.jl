@@ -1,9 +1,11 @@
 ENV["OMP_NUM_THREADS"] = 2
 
+
 using Pkg
 if Sys.isapple()
     Pkg.add(name="MKL_jll"; version = "2023")
 end
+
 
 using Test
 using Pardiso
@@ -14,7 +16,7 @@ using LinearAlgebra
 Random.seed!(1234)
 
 available_solvers = empty([Pardiso.AbstractPardisoSolver])
-if Pardiso.MKL_jll.is_available()
+if Pardiso.mkl_is_available()
     push!(available_solvers, MKLPardisoSolver)
 else
     @warn "Not testing MKL Pardiso solver"
@@ -71,7 +73,7 @@ for solver in available_solvers
     example_hermitian_psd(solver)
 end
 
-if Pardiso.MKL_jll.is_available()
+if Pardiso.mkl_is_available()
     if Sys.CPU_THREADS >= 4
         @testset "procs" begin
             ps = MKLPardisoSolver()

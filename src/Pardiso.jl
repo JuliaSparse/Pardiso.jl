@@ -26,6 +26,10 @@ if !LOCAL_MKL_FOUND
     import MKL_jll
 end
 
+MKL_LOAD_FAILED = false
+
+mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED 
+
 if LinearAlgebra.BLAS.vendor() === :mkl && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
     const PARDISO_FUNC = :pardiso_64
@@ -109,9 +113,8 @@ const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
 
 function __init__()
-    if MKL_jll.is_available()
-        libmkl_rt[] = MKL_jll.libmkl_rt_path
-    elseif LOCAL_MKL_FOUND
+    global MKL_LOAD_FAILED
+    if LOCAL_MKL_FOUND
         if Sys.iswindows()
             libmkl_rt[] = "mkl_rt"
         elseif Sys.isapple()
@@ -119,7 +122,10 @@ function __init__()
         else
             libmkl_rt[] = "libmkl_rt"
         end
+    elseif MKL_jll.is_available()
+        libmkl_rt[] = MKL_jll.libmkl_rt_path
     end
+    
     if !haskey(ENV, "PARDISOLICMESSAGE")
         ENV["PARDISOLICMESSAGE"] = 1
     end
@@ -128,6 +134,16 @@ function __init__()
         @warn "MKLROOT not set, MKL Pardiso solver will not be functional"
     end
 
+    if mkl_is_available() 
+        try
+            libmklpardiso = Libdl.dlopen(libmkl_rt[])
+            mklpardiso_f = Libdl.dlsym(libmklpardiso, "pardiso")
+        catch e
+            @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
+            MKL_LOAD_FAILED = true
+        end
+    end
+    
     # This is apparently needed for MKL to not get stuck on 1 thread when
     # libpardiso is loaded in the block below...
     if libmkl_rt[] !== ""

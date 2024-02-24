@@ -18,20 +18,21 @@ library.
 
 ### MKL PARDISO
 
-By default Julia, will automatically install a suitable MKL for your platform.
+By default Julia, will automatically install a suitable MKL for your platform by loading `MKL_jll.jl`.
 Note that if you use a mac you will need to pin `MKL_jll` to version 2023.
 
-If you rather use a self installed MKL follow these instructions:
+If you instead use a self installed MKL, follow these instructions:
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started
-  manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started)
+* Set the `MKLROOT` environment variable. See the [MKL set environment variables
+  manual](https://www.intel.com/content/www/us/en/docs/onemkl/developer-guide-linux/2024-0/scripts-to-set-environment-variables.html)
   for a thorough guide how to set this variable correctly, typically done by
-  executing something like `source /opt/intel/mkl/bin/mklvars.sh intel64` or
+  executing something like `source /opt/intel/oneapi/setvars.sh intel64` or
   running `"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64`
-* Run `Pkg.build("Pardiso")`
+* Run `Pkg.build("Pardiso", verbose=true)`
 * Run `Pardiso.show_build_log()` to see the build log for additional
   information.
-* Note that the `MKLROOT` environment variable must be set whenever using the library.
+* Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib`  
+  whenever using the library.
 
 ### PARDISO 6.0
 
