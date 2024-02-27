@@ -1,6 +1,7 @@
 __precompile__()
 
 module Pardiso
+using Compat
 
 if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
@@ -51,6 +52,7 @@ export solve, solve!
 export get_matrix
 export schur_complement, pardisogetschur
 export fix_iparm!
+@compat public mkl_is_available, panua_is_available
 
 struct PardisoException <: Exception
     info::String
@@ -111,6 +113,8 @@ const pardiso_chkvec = Ref{Ptr}()
 const pardiso_chkvec_z = Ref{Ptr}()
 const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
+
+panua_is_available() = PARDISO_LOADED[]
 
 function __init__()
     global MKL_LOAD_FAILED

@@ -12,8 +12,8 @@ mutable struct PardisoSolver <: AbstractPardisoSolver
 end
 
 function PardisoSolver()
-    if !PARDISO_LOADED[]
-      error("pardiso library was not loaded")
+    if !panua_is_available()
+      error("Panua pardiso library was not loaded")
     end
 
     pt = zeros(Int, 64)
