@@ -13,6 +13,9 @@ mutable struct MKLPardisoSolver <: AbstractPardisoSolver
 end
 
 function MKLPardisoSolver()
+    if !(mkl_is_available())
+        error("MKL is not available")
+    end
     pt = zeros(Int, 64)
     iparm = zeros(MklInt, 64)
     mtype = REAL_NONSYM

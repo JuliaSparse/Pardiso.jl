@@ -20,20 +20,24 @@ library.
 
 ### MKL PARDISO
 
-By default Julia, will automatically install a suitable MKL for your platform.
-If you rather use a self installed MKL follow these instructions:
+By default Julia, will automatically install a suitable MKL for your platform by loading `MKL_jll.jl`.
+Note that if you use a mac you will need to pin `MKL_jll` to version 2023.
 
-* Set the `MKLROOT` environment variable. See the [MKL getting started
-  manual](https://software.intel.com/en-us/articles/intel-mkl-103-getting-started)
+If you instead use a self installed MKL, follow these instructions:
+
+* Set the `MKLROOT` environment variable. See the [MKL set environment variables
+  manual](https://www.intel.com/content/www/us/en/docs/onemkl/developer-guide-linux/2024-0/scripts-to-set-environment-variables.html)
   for a thorough guide how to set this variable correctly, typically done by
-  executing something like `source /opt/intel/mkl/bin/mklvars.sh intel64` or
+  executing something like `source /opt/intel/oneapi/setvars.sh intel64` or
   running `"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64`
-* Run `Pkg.build("Pardiso")`
+* Run `Pkg.build("Pardiso", verbose=true)`
 * Run `Pardiso.show_build_log()` to see the build log for additional
   information.
-* Note that the `MKLROOT` environment variable must be set whenever using the library.
+* Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib`  
+  whenever using the library.
 
 ### PARDISO from [panua.ch](https://pardiso-project.org) ("ProjectPardiso")
+
 
 * Unzip the download file `panua-pardiso-yyyymmdd-os.zip` to some folder and set the environment variable `JULIA_PARDISO`
   to the `lib` subdirectory of this folder.
@@ -143,8 +147,8 @@ which gives
 julia> S
 5×5 Array{Float64,2}:
   -0.121404    1.49473  -1.25965    7.40326    0.571538
- -19.4928     -7.71151  12.9496    -7.13646  -20.4194  
-   9.88029     3.35502  -7.2346     1.70651   13.9759  
+ -19.4928     -7.71151  12.9496    -7.13646  -20.4194
+   9.88029     3.35502  -7.2346     1.70651   13.9759
   -9.06094    -5.86454   7.44917   -2.54985   -9.17327
  -33.7006    -17.8323   20.2588   -19.5863   -37.6132
 ```

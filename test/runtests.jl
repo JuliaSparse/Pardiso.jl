@@ -1,5 +1,12 @@
 ENV["OMP_NUM_THREADS"] = 2
 
+
+using Pkg
+if Sys.isapple()
+    Pkg.add(name="MKL_jll"; version = "2023")
+end
+
+
 using Test
 using Pardiso
 using Random
@@ -8,20 +15,25 @@ using LinearAlgebra
 
 Random.seed!(1234)
 
-psolvers = [MKLPardisoSolver]
+available_solvers = empty([Pardiso.AbstractPardisoSolver])
+if Pardiso.mkl_is_available()
+    push!(available_solvers, MKLPardisoSolver)
+else
+    @warn "Not testing MKL Pardiso solver"
+end
 if Pardiso.PARDISO_LOADED[]
-    push!(psolvers, PardisoSolver)
+    push!(available_solvers, PardisoSolver)
 else
     @warn "Not testing project Pardiso solver"
 end
 
 @show Pardiso.MklInt
 
-println("Testing ", psolvers)
+println("Testing ", available_solvers)
 
 # Test solver + for real and complex data
 @testset "solving" begin
-for pardiso_type in psolvers
+for pardiso_type in available_solvers
     ps = pardiso_type()
     for T in (Float64, ComplexF64)
         A1 = sparse(rand(T, 10,10))
@@ -52,24 +64,25 @@ for pardiso_type in psolvers
 end
 end #testset
 
-module ExampleUnsym
-    include("../examples/exampleunsym.jl")
-end
-module ExampleSym
-    include("../examples/examplesym.jl")
-end
-module ExampleHerm
-    include("../examples/exampleherm.jl")
+include("../examples/examplesym.jl")
+include("../examples/exampleunsym.jl")
+include("../examples/exampleherm.jl")
+for solver in available_solvers
+    example_symmetric(solver)
+    example_unsymmetric(solver)
+    example_hermitian_psd(solver)
 end
 
-if Sys.CPU_THREADS >= 4
-    @testset "procs" begin
-        ps = MKLPardisoSolver()
-        np = get_nprocs(ps)
-        set_nprocs!(ps, 2)
-        @test get_nprocs(ps) == 2
-        set_nprocs!(ps, np)
-        @test get_nprocs(ps) == np
+if Pardiso.mkl_is_available()
+    if Sys.CPU_THREADS >= 4
+        @testset "procs" begin
+            ps = MKLPardisoSolver()
+            np = get_nprocs(ps)
+            set_nprocs!(ps, 2)
+            @test get_nprocs(ps) == 2
+            set_nprocs!(ps, np)
+            @test get_nprocs(ps) == np
+        end
     end
 end
 
@@ -121,7 +134,7 @@ end # testset
 end
 
 @testset "error checks" begin
-for pardiso_type in psolvers
+for pardiso_type in available_solvers
 
     ps = pardiso_type()
 
@@ -151,7 +164,7 @@ end # testset
 
 
 @testset "getters and setters" begin
-for pardiso_type in psolvers
+for pardiso_type in available_solvers
     ps = pardiso_type()
     set_iparm!(ps, 1, 0)
     pardisoinit(ps)
@@ -185,7 +198,7 @@ for pardiso_type in psolvers
 end
 
 @testset "pardiso" begin
-    for pardiso_type in psolvers
+    for pardiso_type in available_solvers
         A = sparse(rand(2,2) + im * rand(2,2))
         b = rand(2)          + im * rand(2)
         ps = pardiso_type()
