@@ -36,17 +36,17 @@ If you instead use a self installed MKL, follow these instructions:
 * Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib`  
   whenever using the library.
 
-### PARDISO from [panua.ch](https://pardiso-project.org) ("ProjectPardiso")
+### PARDISO from [panua.ch](https://panua.ch) ("Panua Pardiso")
 
 
 * Unzip the download file `panua-pardiso-yyyymmdd-os.zip` to some folder and set the environment variable `JULIA_PARDISO`
-  to the `lib` subdirectory of this folder.
-* (Project-Pardiso 6.0): Put the PARDISO library `libpardisoVVV-WIN-X86-64.dll`, `libpardisoVVV-GNUXXX-X86-64.so` or 
-  `libpardisoVVV-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
-  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/Pardiso"` in the
-  `.julia/config/startup.jl` file and download the Pardiso library to that folder.
+  to the `lib` subdirectory of this folder.  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/panua-pardiso-yyyymmdd-os/lib"` in the
+  `.julia/config/startup.jl` file and download the Pardiso library to that folder. If you have a valid license for
+  the predecessor from pardiso-project.org, put the PARDISO library `libpardisoVVV-WIN-X86-64.dll`, `libpardisoVVV-GNUXXX-X86-64.so` or 
+   `libpardisoVVV-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
+
 * Perform the platform specific steps below
-* Run `Pkg.build("Pardiso")`
+* Run `Pkg.build("Pardiso", verbose=true)`
 * Run `Pardiso.show_build_log()` to see the build log for additional information.
 
 Note: Weird errors and problems with MKL Pardiso has been observed when ProjectPardiso is enabled
@@ -60,7 +60,7 @@ the environment variable `JULIA_PARDISO` (and rerunning `build Pardiso`).
 * Make sure OpenMP is installed.
 * Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself), using for example [OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/Precompiled-installation-packages)
 
-`gfortran` and OpenMP usually come with recent version of gcc/gfortran. On Linux, ProjectPardiso
+`gfortran` and OpenMP usually come with recent version of gcc/gfortran. On Linux, Panua Pardiso
 looks for libraries `libgfortran.so` and `libgomp.so` . They may be named differently on your system.
 In this situation you may try to create links to them with names known to
 `Pardiso.jl` (bash; pathnames serve as examples here):
