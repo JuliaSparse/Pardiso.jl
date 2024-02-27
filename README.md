@@ -31,28 +31,21 @@ If you instead use a self installed MKL, follow these instructions:
   executing something like `source /opt/intel/oneapi/setvars.sh intel64` or
   running `"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64`
 * Run `Pkg.build("Pardiso", verbose=true)`
-* Run `Pardiso.show_build_log()` to see the build log for additional
-  information.
-* Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib`  
-  whenever using the library.
+* Eventually, run `Pardiso.show_build_log()` to see the build log for additional information.
+* Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib` whenever using the library.
 
-### PARDISO from [panua.ch](https://panua.ch) ("Panua Pardiso")
+### PARDISO from [panua.ch](https://panua.ch) ("PanuaPardiso", formerly "ProjectPardiso")
 
-
-* Unzip the download file `panua-pardiso-yyyymmdd-os.zip` to some folder and set the environment variable `JULIA_PARDISO`
-  to the `lib` subdirectory of this folder.  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/panua-pardiso-yyyymmdd-os/lib"` in the
-  `.julia/config/startup.jl` file and download the Pardiso library to that folder. If you have a valid license for
-  the predecessor from pardiso-project.org, put the PARDISO library `libpardisoVVV-WIN-X86-64.dll`, `libpardisoVVV-GNUXXX-X86-64.so` or 
-   `libpardisoVVV-MACOS-X86-64.dylib` in a folder somewhere and set the environment variable `JULIA_PARDISO` to that folder.
-
+* Unzip the download file `panua-pardiso-yyyymmdd-os.zip` to some folder and set the environment variable `JULIA_PARDISO` to the `lib` subdirectory of this folder.  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/panua-pardiso-yyyymmdd-os/lib"` in `.julia/config/startup.jl`. If you have a valid license for the predecessor from pardiso-project.org, put the PARDISO library to a subdirectory denoted by `ENV["JULIA_PARDISO"]`,
+  evenutally rename it to `libpardiso.so`.
 * Perform the platform specific steps below
 * Run `Pkg.build("Pardiso", verbose=true)`
-* Run `Pardiso.show_build_log()` to see the build log for additional information.
+* Eventually, run `Pardiso.show_build_log()` to see the build log for additional information.
 
-Note: Weird errors and problems with MKL Pardiso has been observed when ProjectPardiso is enabled
-(likely because some library that is needed by  ProjectPardiso is problematic with MKL).
-If you want to use MKL Pardiso it is better ot just disable  ProjectPardiso by not setting
-the environment variable `JULIA_PARDISO` (and rerunning `build Pardiso`).
+Note: In the past, weird errors and problems with MKL Pardiso had been observed when PanuaPardiso is enabled
+(likely because some library that is needed by  PanauaPardiso was problematic with MKL).
+In that case of you want to use MKL Pardiso it is better ot just disable  PanuaPardiso by not setting
+the environment variable `JULIA_PARDISO` (and rerunning `Pkg.build("Pardiso")`).
 
 ##### Linux / macOS specific
 
@@ -77,7 +70,7 @@ This section will explain how to solve equations using `Pardiso.jl` with the def
 
 ## Creating the PardisoSolver
 
-A `PardisoSolver` is created with `PardisoSolver()` for solving with ProjectPardiso or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
+A `PardisoSolver` is created with `PardisoSolver()` for solving with PanuaPardiso or `MKLPardisoSolver()` for solving with MKL PARDISO. This object will hold the settings of the solver and will be passed into the solve functions. In the following sections an instance of a `PardisoSolver` or an `MKLPardisoSolver()` will be referred to as `ps`.
 
 ### Solving
 
@@ -116,7 +109,7 @@ julia> X
  -1.17295    8.47922
 ```
 
-### Schur Complement (ProjectPardiso only)
+### Schur Complement (PanuaPardiso only)
 
 Given a partitioned matrix `M = [A B; C D]`, the Schur complement of `A` in `M` is `S = D-CA⁻¹B`.
 This can be found with the function `schur_complement` with the following signatures:
@@ -163,7 +156,7 @@ At present there seems to be an instability in the Schur complement computation 
 
 ### Setting the number of threads
 
-The number of threads to use is set in different ways for MKL PARDISO and ProjectPardiso.
+The number of threads to use is set in different ways for MKL PARDISO and PanuaPardiso.
 
 #### MKL PARDISO
 
@@ -172,7 +165,7 @@ set_nprocs!(ps, i) # Sets the number of threads to use
 get_nprocs(ps) # Gets the number of threads being used
 ```
 
-#### ProjectPardiso
+#### PanuaPardiso
 
 The number of threads are set at the creation of the `PardisoSolver` by looking for the environment variable `OMP_NUM_THREADS`. This can be done in Julia with for example `ENV["OMP_NUM_THREADS"] = 2`. **Note:** `OMP_NUM_THREADS` must be set *before* `Pardiso` is loaded and can not be changed during runtime.
 
@@ -182,7 +175,7 @@ The number of threads used by a `PardisoSolver` can be retrieved with `get_nproc
 
 This section discusses some more advanced usage of `Pardiso.jl`.
 
-For terminology in this section please refer to the [ProjectPardiso manual](http://www.pardiso-project.org/manual/manual.pdf) and the [MKL PARDISO section](https://software.intel.com/en-us/node/470282).
+For terminology in this section please refer to the [PanuaPardiso manual](http://panua.ch/manual/manual.pdf) and the [oneMKL PARDISO section](https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2024-0/onemkl-pardiso-parallel-direct-sparse-solver-iface.html).
 
 After using functionality in this section, calls should no longer be made to the `solve` functions but instead directly to the function
 
@@ -214,8 +207,8 @@ The matrix type can be explicitly set with `set_matrixtype!(ps, key)` where the 
 
 The matrix type for a solver can be retrieved with `get_matrixtype(ps)`.
 
-### Setting the solver (ProjectPardiso only)
-ProjectPardiso supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
+### Setting the solver (PanuaPardiso only)
+PanuatPardiso supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
 
 | enum               | integer | Solver                           |
 |--------------------|---------|----------------------------------|
@@ -243,7 +236,7 @@ Depending on the phase calls to `solve` (and `pardiso` which is mentioned later)
 | RELEASE_ALL                           | -1      | Release all internal memory for all matrices                   |
 
 ### Setting `IPARM` and `DPARM` explicitly
-Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (ProjectPardiso only) parameters.
+Advanced users likely want to explicitly set and retrieve the `IPARM` and `DPARM` (PanuaPardiso only) parameters.
 This can be done with the getters and setters:
 
 ```jl
@@ -251,7 +244,7 @@ get_iparm(ps, i) # Gets IPARM[i]
 get_iparms(ps) # Gets IPARM
 set_iparm!(ps, i, v) # Sets IPARM[i] = v
 
-# ProjectPardiso only
+# PanuaPardiso only
 get_dparm(ps, i) # Gets DPARM[i]
 get_dparms(ps) # Gets DPARM
 set_dparm!(ps, i, v) # Sets DPARM[i] = v
@@ -270,7 +263,7 @@ It is possible for Pardiso to print out timings and statistics when solving. Thi
 
 ### Matrix and vector checkers
 
-ProjectPardiso comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
+PanuaPardiso comes with a few matrix and vector checkers to check the consistency and integrity of the input data. These can be called with the functions:
 
 ```jl
 printstats(ps, A, B)
@@ -295,7 +288,7 @@ get_perm(ps)
 set_perm!(ps, perm) # Perm is a Vector{Int}
 ```
 
-### Schur Complement (ProjectPardiso only)
+### Schur Complement (PanuaPardiso only)
 
 The `pardiso(ps,...)` syntax can be used to compute the Schur compelement (as described below). The answer can be retrieved with `pardisogetschur(ps)`.
 
