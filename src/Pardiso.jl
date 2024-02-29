@@ -1,7 +1,6 @@
 __precompile__()
 
 module Pardiso
-using Compat
 
 if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
     error("""please run Pkg.build("Pardiso") before loading the package""")
@@ -52,7 +51,7 @@ export solve, solve!
 export get_matrix
 export schur_complement, pardisogetschur
 export fix_iparm!
-@compat public mkl_is_available, panua_is_available
+export  mkl_is_available, panua_is_available
 
 struct PardisoException <: Exception
     info::String
