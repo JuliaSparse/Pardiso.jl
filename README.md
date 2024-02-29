@@ -2,13 +2,13 @@
 
 [![CI Testing](https://github.com/JuliaSparse/Pardiso.jl/workflows/CI/badge.svg)](https://github.com/JuliaSparse/Pardiso.jl/actions?query=workflow%3ACI+branch%3Amaster)
 
-The Pardiso.jl package provides an interface for using [Panua Pardiso](https://panua.ch/), it's predecessors from
+The Pardiso.jl package provides an interface for using [Panua Pardiso](https://panua.ch/pardiso), it's predecessors from
 [pardiso-project.org](http://www.pardiso-project.org/), and [Intel MKL
-PARDISO](https://software.intel.com/en-us/node/470282) from the [Julia
+PARDISO](https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2024-0/onemkl-pardiso-parallel-direct-sparse-solver-iface.html) from the [Julia
 language](http://julialang.org).
 
-You cannot use `Pardiso.jl` without either
-having a valid license for PARDISO or having the MKL library installed. This
+You cannot use `Pardiso.jl` without either having a valid license for Panua Pardiso or
+having the MKL library installed. This
 package is available free of charge and in no way replaces or alters any
 functionality of the linked libraries.
 
@@ -32,7 +32,7 @@ If you instead use a self installed MKL, follow these instructions:
   running `"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64`
 * Run `Pkg.build("Pardiso", verbose=true)`
 * Eventually, run `Pardiso.show_build_log()` to see the build log for additional information.
-* Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib` whenever using the library.
+* Note that the `MKLROOT` environment variable must be set, and `LD_LIBRARY_PATH` must contain `$MKLROOT/lib` whenever using the library this way.
 
 ### PARDISO from [panua.ch](https://panua.ch) ("PanuaPardiso", formerly "ProjectPardiso")
 
@@ -44,7 +44,7 @@ If you instead use a self installed MKL, follow these instructions:
 
 Note: In the past, weird errors and problems with MKL Pardiso had been observed when PanuaPardiso is enabled
 (likely because some library that is needed by  PanauaPardiso was problematic with MKL).
-In that case of you want to use MKL Pardiso it is better ot just disable  PanuaPardiso by not setting
+In that case, if you want to use MKL Pardiso it is better to just disable  PanuaPardiso by not setting
 the environment variable `JULIA_PARDISO` (and rerunning `Pkg.build("Pardiso")`).
 
 ##### Linux / macOS specific
