@@ -355,11 +355,7 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
     end
 
     N = size(A, 2)
-
-    AA = A.nzval
-    IA = convert(Vector{Int32}, A.colptr)
-    JA = convert(Vector{Int32}, A.rowval)
-
+    
     resize!(ps.perm, size(B, 1))
 
     NRHS = size(B, 2)
