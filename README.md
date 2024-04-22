@@ -1,6 +1,6 @@
 # Pardiso.jl
 
-[![CI Testing](https://github.com/JuliaSparse/Pardiso.jl/workflows/CI/badge.svg)](https://github.com/JuliaSparse/Pardiso.jl/actions?query=workflow%3ACI+branch%3Amaster)
+[![CI Testing](https://github.com/JuliaSparse/Pardiso.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuliaSparse/Pardiso.jl/actions/workflows/CI.yml)
 
 The Pardiso.jl package provides an interface for using [Panua Pardiso](https://panua.ch/pardiso), it's predecessors from
 [pardiso-project.org](http://www.pardiso-project.org/), and [Intel MKL
