@@ -166,27 +166,6 @@ function __init__()
             pardiso_chkvec_z[] = Libdl.dlsym(libpardiso, "pardiso_chkvec_z")
             pardiso_get_schur_f[] = Libdl.dlsym(libpardiso, "pardiso_get_schur")
 
-            if Sys.isunix()
-                gfortran_v = [8, 9]
-                for lib in ("libgfortran", "libgomp")
-                    load_lib_fortran(lib, gfortran_v)
-                end
-            end
-
-            # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
-            # if not MKL is loaded
-            if Sys.isunix() && false
-                ptr = C_NULL
-                for l in ("libblas", "libblas.so.3")
-                    ptr = Libdl.dlopen_e(l, Libdl.RTLD_GLOBAL)
-                    if ptr !== C_NULL
-                        break
-                    end
-                end
-                if ptr == C_NULL
-                    error("could not load blas library")
-                end
-            end
             PARDISO_LOADED[] = true
         catch e
             @error("Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
