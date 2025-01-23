@@ -175,7 +175,7 @@ function __init__()
 
             # Windows Pardiso lib comes with BLAS + LAPACK prebaked but not on UNIX so we open them here
             # if not MKL is loaded
-            if Sys.isunix()
+            if Sys.isunix() && false
                 ptr = C_NULL
                 for l in ("libblas", "libblas.so.3")
                     ptr = Libdl.dlopen_e(l, Libdl.RTLD_GLOBAL)
