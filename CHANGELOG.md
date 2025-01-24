@@ -6,6 +6,7 @@
 
 - Allow for MKL v2025
 - Bump version to 1.0
+- Remove superfluous loading of libblas and libgomp under linux
 - add Changelog created with git-cliff
 
 ## [0.5.7] - 2024-04-22
