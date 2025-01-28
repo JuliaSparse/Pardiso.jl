@@ -1,7 +1,7 @@
 name = "Pardiso"
 uuid = "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2"
 repo = "https://github.com/JuliaSparse/Pardiso.jl.git"
-version = "0.5.7"
+version = "1.0.0"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -10,7 +10,7 @@ MKL_jll = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
-MKL_jll = "2021, 2022, 2023, 2024"
+MKL_jll = "2021, 2022, 2023, 2024, 2025"
 julia = "1.6"
 
 [extras]
