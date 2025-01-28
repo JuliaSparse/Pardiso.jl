@@ -47,22 +47,6 @@ Note: In the past, weird errors and problems with MKL Pardiso had been observed 
 In that case, if you want to use MKL Pardiso it is better to just disable  PanuaPardiso by not setting
 the environment variable `JULIA_PARDISO` (and rerunning `Pkg.build("Pardiso")`).
 
-##### Linux / macOS specific
-
-* Make sure that the version of `gfortran` corresponding to the pardiso library is installed.
-* Make sure OpenMP is installed.
-* Install a (fast) installation of a BLAS and LAPACK (this should preferably be single threaded since PARDISO handles threading itself), using for example [OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/Precompiled-installation-packages)
-
-`gfortran` and OpenMP usually come with recent version of gcc/gfortran. On Linux, Panua Pardiso
-looks for libraries `libgfortran.so` and `libgomp.so` . They may be named differently on your system.
-In this situation you may try to create links to them with names known to
-`Pardiso.jl` (bash; pathnames serve as examples here):
-````
-$ mkdir $HOME/extralibs
-$ ln -s /usr/lib64/libgomp.so.1 $HOME/extralibs/libgomp.so
-$ ln -s /usr/lib64/libgfortran.so.5 $HOME/extralibs/libgfortran.so
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/extralibs/
-````
 
 ## Basic Usage
 
