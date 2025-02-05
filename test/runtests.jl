@@ -31,11 +31,14 @@ end
 
 println("Testing ", available_solvers)
 
+supported_eltypes(ps::PardisoSolver) = (Float64, ComplexF64)
+supported_eltypes(ps::MKLPardisoSolver) = (Float32, ComplexF32, Float64, ComplexF64)
+
 # Test solver + for real and complex data
 @testset "solving" begin
 for pardiso_type in available_solvers
     ps = pardiso_type()
-    for T in (Float64, ComplexF64)
+    for T in supported_eltypes(ps)
         A1 = sparse(rand(T, 10,10))
         for B in (rand(T, 10, 2), view(rand(T, 10, 4), 1:10, 2:3))
             X = similar(B)

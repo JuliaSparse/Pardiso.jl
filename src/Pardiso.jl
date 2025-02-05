@@ -64,7 +64,7 @@ end
 Base.showerror(io::IO, e::Union{PardisoException,PardisoPosDefException}) = print(io, e.info);
 
 
-const PardisoNumTypes = Union{Float64,ComplexF64}
+const PardisoNumTypes = Union{Float32, ComplexF32, Float64, ComplexF64}
 
 abstract type AbstractPardisoSolver end
 
@@ -173,7 +173,7 @@ function __init__()
     end
 end
 include("enums.jl")
-include("project_pardiso.jl")
+include("panua_pardiso.jl")
 include("mkl_pardiso.jl")
 
 # Getters and setters
@@ -218,9 +218,9 @@ end
 
 function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
                B::StridedVecOrMat{Tv}, T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
-  X = copy(B)
-  solve!(ps, X, A, B, T)
-  return X
+    X = copy(B)
+    solve!(ps, X, A, B, T)
+    return X
 end
 
 function fix_iparm!(ps::AbstractPardisoSolver, T::Symbol)
@@ -244,6 +244,7 @@ end
 function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
                 T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
+    LinearAlgebra.checksquare(A)
     set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
 
     # This is the heuristics for choosing what matrix type to use
@@ -253,9 +254,10 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
     # - If complex and symmetric, solve with symmetric complex solver
     # - Else solve as unsymmetric.
     if ishermitian(A)
-        eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
+        eltype(A) <: Union{Float32, Float64} ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
         pardisoinit(ps)
         fix_iparm!(ps, T)
+        eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
         try
             pardiso(ps, X, get_matrix(ps, A, T), B)
         catch e
@@ -265,20 +267,23 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
             if !isa(e, PardisoPosDefException)
                 rethrow()
             end
-            eltype(A) == Float64 ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF)
+            eltype(A) <: Union{Float32, Float64} ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF)
             pardisoinit(ps)
             fix_iparm!(ps, T)
+            eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
             pardiso(ps, X, get_matrix(ps, A, T), B)
         end
     elseif issymmetric(A)
         set_matrixtype!(ps, COMPLEX_SYM)
         pardisoinit(ps)
         fix_iparm!(ps, T)
+        eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
         pardiso(ps, X, get_matrix(ps, A, T), B)
     else
-        eltype(A) == Float64 ? set_matrixtype!(ps, REAL_NONSYM) : set_matrixtype!(ps, COMPLEX_NONSYM)
+        eltype(A) <: Union{Float32, Float64} ? set_matrixtype!(ps, REAL_NONSYM) : set_matrixtype!(ps, COMPLEX_NONSYM)
         pardisoinit(ps)
         fix_iparm!(ps, T)
+        eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
         pardiso(ps, X, get_matrix(ps, A, T), B)
     end
 
@@ -435,6 +440,7 @@ function pardisogetschur(ps::AbstractPardisoSolver)
 end
 
 function dim_check(X, A, B)
+    LinearAlgebra.checksquare(A)
     size(X) == size(B) || throw(DimensionMismatch(string("solution has $(size(X)), ",
                                                          "RHS has size as $(size(B)).")))
     size(A, 1) == size(B, 1) || throw(DimensionMismatch(string("matrix has $(size(A,1)) ",
