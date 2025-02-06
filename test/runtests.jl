@@ -39,7 +39,8 @@ supported_eltypes(ps::MKLPardisoSolver) = (Float32, ComplexF32, Float64, Complex
 for pardiso_type in available_solvers
     ps = pardiso_type()
     for T in supported_eltypes(ps)
-        # Previous versions of SparseArrays do not support Float32
+        # Older vesions SparseArrays do not support Float32/ComplexF64.
+        # As such the reference solution will always be computed in Float64/ComplexF64
         S = T <: Real ? Float64 : ComplexF64 
         A1 = sparse(rand(T, 10,10))
         for B in (rand(T, 10, 2), view(rand(T, 10, 4), 1:10, 2:3))
@@ -47,22 +48,22 @@ for pardiso_type in available_solvers
             # Test unsymmetric, herm indef, herm posdef and symmetric
             for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, transpose(A1) + A1]
                 solve!(ps, X, A, B)
-                @test X ≈ convert.(S,A)\convert.(S,Matrix(B))
+                @test X ≈ convert.(T,convert.(S,A)\convert.(S,Matrix(B)))
 
                 X = solve(ps, A, B)
-                @test X ≈ convert.(S,A)\convert.(S,Matrix(B))
+                @test X ≈ convert.(T,convert.(S,A)\convert.(S,Matrix(B)))
 
                 solve!(ps, X, A, B, :C)
-                @test X ≈ convert.(S,A)'\convert.(S,Matrix(B))
+                @test X ≈ convert.(T,convert.(S,A)'\convert.(S,Matrix(B)))
 
                 X = solve(ps, A, B, :C)
-                @test X ≈ convert.(S,A)'\convert.(S,Matrix(B))
+                @test X ≈ convert.(T,convert.(S,A)'\convert.(S,Matrix(B)))
 
                 solve!(ps, X, A, B, :T)
-                @test X ≈ copy(transpose(convert.(S,A)))\convert.(S,Matrix(B))
+                @test X ≈ convert.(T,copy(transpose(convert.(S,A)))\convert.(S,Matrix(B)))
 
                 X = solve(ps, A, B, :T)
-                @test X ≈ copy(transpose(convert.(S,A)))\convert.(S,Matrix(B))
+                @test X ≈ convert.(T,copy(transpose(convert.(S,A)))\convert.(S,Matrix(B)))
             end
         end
     end
