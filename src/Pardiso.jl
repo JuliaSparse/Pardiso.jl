@@ -338,6 +338,11 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
                                     "has a complex matrix type set: $(get_matrixtype(ps))")))
     end
 
+    if Tv <: Union{Float32, ComplexF32} && typeof(ps) <: MKLPardisoSolver && ps.iparm[28] != 1
+        throw(ErrorException(string("input matrix is Float32/ComplexF32 while MKLPardisoSolver ",
+                                    "have iparm[28]=$(ps.iparm[28]) rather than 1.")))
+    end
+
     N = size(A, 2)
     
     resize!(ps.perm, size(B, 1))
