@@ -187,8 +187,8 @@ for pardiso_type in available_solvers
     set_iparm!(ps, 13, 100)
     @test get_iparm(ps, 13) == 100
 
-    set_matrixtype!(ps, Pardiso.REAL_SYM)
-    @test get_matrixtype(ps) == Pardiso.REAL_SYM
+    set_matrixtype!(ps, Pardiso.REAL_STRUCT_SYM)
+    @test get_matrixtype(ps) == Pardiso.REAL_STRUCT_SYM
 
     set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT)
     @test get_phase(ps) == Pardiso.ANALYSIS_NUM_FACT
