@@ -9,6 +9,8 @@ mutable struct PardisoSolver <: AbstractPardisoSolver
     maxfct::Int32
     mnum::Int32
     perm::Vector{Int32}
+    colptr::Vector{Int32}
+    rowval::Vector{Int32}
 end
 
 function PardisoSolver()
@@ -34,9 +36,11 @@ function PardisoSolver()
     mnum = 1
     maxfct = 1
     perm = Int32[]
+    colptr = Int32[]
+    rowval = Int32[]
 
     ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
-                  phase, msglvl, maxfct, mnum, perm)
+                  phase, msglvl, maxfct, mnum, perm, colptr, rowval)
 
     return ps
 end
@@ -77,9 +81,14 @@ end
 
 @inline function ccall_pardiso(ps::PardisoSolver, N::Integer, nzval::Vector{Tv},
                                    colptr, rowval, NRHS::Integer, B::StridedVecOrMat{Tv}, X::StridedVecOrMat{Tv}) where {Tv}
+    (Tv == Float32 || Tv == ComplexF32) && throw(ArgumentError("Single precision input matrix only supported by MKL."))
+
     N = Int32(N)
-    colptr = convert(Vector{Int32}, colptr)
-    rowval = convert(Vector{Int32}, rowval)
+    # Save new colptr and rowvals if a new analysis phase is run
+    if ps.phase in [ANALYSIS, ANALYSIS_NUM_FACT, ANALYSIS_NUM_FACT_SOLVE_REFINE]
+        ps.colptr = convert(Vector{Int32}, colptr)
+        ps.rowval = convert(Vector{Int32}, rowval)
+    end
     resize!(ps.perm, size(B, 1))
     NRHS = Int32(NRHS)
 
@@ -90,7 +99,7 @@ end
            Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv}, Ptr{Tv},
            Ptr{Int32}, Ptr{Float64}),
           ps.pt, Ref(ps.maxfct), Ref(Int32(ps.mnum)), Ref(Int32(ps.mtype)), Ref(Int32(ps.phase)),
-          Ref(N), nzval, colptr, rowval, ps.perm,
+          Ref(N), nzval, ps.colptr, ps.rowval, ps.perm,
           Ref(NRHS), ps.iparm, Ref(Int32(ps.msglvl)), B, X,
           ERR, ps.dparm)
     check_error(ps, ERR[])
@@ -99,6 +108,8 @@ end
 
 @inline function ccall_pardiso_get_schur(ps::PardisoSolver, S::Vector{Tv},
                                    IS::Vector{Int32}, JS::Vector{Int32}) where Tv
+    (Tv == Float32 || Tv == ComplexF32) && throw(ArgumentError("Single precision input matrix only supported by MKL."))
+
     ccall(pardiso_get_schur_f[], Cvoid,
           (Ptr{Int}, Ptr{Int32}, Ptr{Int32}, Ptr{Int32}, Ptr{Tv},
            Ptr{Int32}, Ptr{Int32}),
@@ -112,8 +123,8 @@ function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                     B::StridedVecOrMat{Tv}) where {Ti,Tv <: PardisoNumTypes}
     N = Int32(size(A, 2))
     AA = A.nzval
-    IA = convert(Vector{Int32}, A.colptr)
-    JA = convert(Vector{Int32}, A.rowval)
+    IA = ps.colptr
+    JA = ps.rowval
     NRHS = Int32(size(B, 2))
     ERR = Ref{Int32}(0)
     if Tv <: Complex
@@ -181,7 +192,7 @@ function check_error(ps::PardisoSolver, err::Integer)
     err != -6  || throw(PardisoException("Preordering failed (matrix types 11, 13 only)."))
     err != -7  || throw(PardisoException("Diagonal matrix problem."))
     err != -8  || throw(PardisoException("32-bit integer overflow problem."))
-    err != -10 || throw(PardisoException("No license file pardiso.lic found."))
+    err != -10 || throw(PardisoException("No license file panua.lic found."))
     err != -11 || throw(PardisoException("License is expired."))
     err != -12 || throw(PardisoException("Wrong username or hostname."))
     err != -100|| throw(PardisoException("Reached maximum number of Krylov-subspace iteration in iterative solver."))

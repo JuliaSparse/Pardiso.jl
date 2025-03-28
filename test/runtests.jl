@@ -24,40 +24,43 @@ end
 if Pardiso.PARDISO_LOADED[]
     push!(available_solvers, PardisoSolver)
 else
-    @warn "Not testing project Pardiso solver"
+    @warn "Not testing panua Pardiso solver"
 end
 
 @show Pardiso.MklInt
 
 println("Testing ", available_solvers)
 
+supported_eltypes(ps::PardisoSolver) = (Float64, ComplexF64)
+supported_eltypes(ps::MKLPardisoSolver) = (Float32, ComplexF32, Float64, ComplexF64)
+
 # Test solver + for real and complex data
 @testset "solving" begin
 for pardiso_type in available_solvers
     ps = pardiso_type()
-    for T in (Float64, ComplexF64)
+    for T in supported_eltypes(ps)
         A1 = sparse(rand(T, 10,10))
         for B in (rand(T, 10, 2), view(rand(T, 10, 4), 1:10, 2:3))
             X = similar(B)
             # Test unsymmetric, herm indef, herm posdef and symmetric
-            for A in SparseMatrixCSC[A1, A1 + A1', A1'A1, transpose(A1) + A1]
+            for A in SparseMatrixCSC[A1, A1 + A1', A1'A1 + I, transpose(A1) + A1]
                 solve!(ps, X, A, B)
-                @test X ≈ A\Matrix(B)
+                @test A*X ≈ B
 
                 X = solve(ps, A, B)
-                @test X ≈ A\Matrix(B)
+                @test A*X ≈ B
 
                 solve!(ps, X, A, B, :C)
-                @test X ≈ A'\Matrix(B)
+                @test A'*X ≈ B
 
                 X = solve(ps, A, B, :C)
-                @test X ≈ A'\Matrix(B)
+                @test A'*X ≈ B
 
                 solve!(ps, X, A, B, :T)
-                @test X ≈ copy(transpose(A))\Matrix(B)
+                @test transpose(A)*X ≈ B
 
                 X = solve(ps, A, B, :T)
-                @test X ≈ copy(transpose(A))\Matrix(B)
+                @test transpose(A)*X ≈ B
             end
         end
     end
