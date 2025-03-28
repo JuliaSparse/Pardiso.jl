@@ -179,7 +179,7 @@ The matrix type can be explicitly set with `set_matrixtype!(ps, key)` where the 
 
 | enum                 | integer | Matrix type                               |
 |--------------------- |---------| ----------------------------------------  |
-| REAL_SYM             | 1       | real and structurally symmetric           |
+| REAL_STRUCT_SYM      | 1       | real and structurally symmetric           |
 | REAL_SYM_POSDEF      | 2       | real and symmetric positive definite      |
 | REAL_SYM_INDEF       | -2      | real and symmetric indefinite             |
 | COMPLEX_STRUCT_SYM   | 3       | complex and structurally symmetric        |
