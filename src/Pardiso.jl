@@ -241,11 +241,84 @@ function fix_iparm!(ps::AbstractPardisoSolver, T::Symbol)
     end
 end
 
-function isstructurallysymmetric(A::SparseMatrixCSC{Tv,Ti})  where {Ti, Tv <: PardisoNumTypes}
-    I, J, _ = findnz(A)
-    A_stucture = sparse(I, J, trues(length(I)), size(A)...)
-    return issymmetric(A_stucture)
+# Copied from SparseArrays.jl but with a tweak
+# to check symmetry of the sparsity pattern
+function _is_hermsym(A::SparseMatrixCSC, check::Function)
+    m, n = size(A)
+    if m != n; return false; end
+
+    colptr = SparseArrays.getcolptr(A)
+    rowval = rowvals(A)
+    nzval = nonzeros(A)
+    tracker = copy(SparseArrays.getcolptr(A))
+    for col in axes(A,2)
+        # `tracker` is updated such that, for symmetric matrices,
+        # the loop below starts from an element at or below the
+        # diagonal element of column `col`"
+        for p = tracker[col]:colptr[col+1]-1
+            val = nzval[p]
+            row = rowval[p]
+
+            # Ignore stored zeros
+            if iszero(val)
+                continue
+            end
+
+            # If the matrix was symmetric we should have updated
+            # the tracker to start at the diagonal or below. Here
+            # we are above the diagonal so the matrix can't be symmetric.
+            if row < col
+                return false
+            end
+
+            # Diagonal element
+            if row == col
+                if !check(val, val)
+                    return false
+                end
+            else
+                offset = tracker[row]
+
+                # If the matrix is unsymmetric, there might not exist
+                # a rowval[offset]
+                if offset > length(rowval)
+                    return false
+                end
+
+                row2 = rowval[offset]
+
+                # row2 can be less than col if the tracker didn't
+                # get updated due to stored zeros in previous elements.
+                # We therefore "catch up" here while making sure that
+                # the elements are actually zero.
+                while row2 < col
+                    if _isnotzero(nzval[offset])
+                        return false
+                    end
+                    offset += 1
+                    row2 = rowval[offset]
+                    tracker[row] += 1
+                end
+
+                # Non zero A[i,j] exists but A[j,i] does not exist
+                if row2 > col
+                    return false
+                end
+
+                # A[i,j] and A[j,i] exists
+                if row2 == col
+                    if !check(val, nzval[offset])
+                        return false
+                    end
+                    tracker[row] += 1
+                end
+            end
+        end
+    end
+    return true
 end
+
+isstructurallysymmetric(A::SparseMatrixCSC) = _is_hermsym(A, Returns(true))
 
 function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
