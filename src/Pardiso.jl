@@ -318,7 +318,7 @@ function _is_hermsym(A::SparseMatrixCSC, check::Function)
     return true
 end
 
-isstructurallysymmetric(A::SparseMatrixCSC) = _is_hermsym(A, Returns(true))
+isstructurallysymmetric(A::SparseMatrixCSC) = _is_hermsym(A, (x,y) -> true)
 
 function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
