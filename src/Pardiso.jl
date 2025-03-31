@@ -355,7 +355,7 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
             end
         else
             if isstructurallysymmetric(A)
-                set_matrixtype!(ps, REAL_STRUCT_SYM)
+                set_matrixtype!(ps, REAL_SYM)
             else
                 set_matrixtype!(ps, REAL_NONSYM)
             end

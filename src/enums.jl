@@ -1,6 +1,6 @@
 # Matrix type
 @enum(MatrixType::Int32,
-    REAL_STRUCT_SYM     = 1,
+    REAL_SYM            = 1,
     REAL_SYM_POSDEF     = 2,
     REAL_SYM_INDEF      = -2,
     COMPLEX_STRUCT_SYM  = 3,
@@ -11,14 +11,14 @@
     COMPLEX_NONSYM      = 13,
 )
 
-Base.isreal(v::MatrixType) = v in (REAL_STRUCT_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, REAL_NONSYM)
+Base.isreal(v::MatrixType) = v in (REAL_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, REAL_NONSYM)
 LinearAlgebra.issymmetric(v::MatrixType) = v in (REAL_SYM_POSDEF, REAL_SYM_INDEF,
                                         COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF, COMPLEX_SYM)
 LinearAlgebra.ishermitian(v::MatrixType) = v in (REAL_SYM_POSDEF, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF)
 isposornegdef(v::MatrixType) = v in (REAL_SYM_POSDEF, REAL_SYM_INDEF, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF)
 
 const MATRIX_STRING = Dict{MatrixType, String}(
-    REAL_STRUCT_SYM => "Real structurally symmetric",
+    REAL_SYM => "Real structurally symmetric",
     REAL_SYM_POSDEF => "Real symmetric positive definite",
     REAL_SYM_INDEF => "Real symmetric indefinite",
     COMPLEX_STRUCT_SYM => "Complex structurally symmetric",
@@ -29,7 +29,7 @@ const MATRIX_STRING = Dict{MatrixType, String}(
     COMPLEX_NONSYM  => "Complex nonsymmetric"
 )
 
-const REAL_MATRIX_TYPES = [REAL_STRUCT_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, REAL_NONSYM]
+const REAL_MATRIX_TYPES = [REAL_SYM, REAL_SYM_POSDEF, REAL_SYM_INDEF, REAL_NONSYM]
 const COMPLEX_MATRIX_TYPES = [COMPLEX_STRUCT_SYM, COMPLEX_HERM_POSDEF, COMPLEX_HERM_INDEF, COMPLEX_NONSYM, COMPLEX_SYM]
 
 # Messages
