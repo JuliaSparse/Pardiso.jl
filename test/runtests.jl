@@ -9,11 +9,10 @@ end
 
 using Test
 using Pardiso
+using StableRNGs
 using Random
 using SparseArrays
 using LinearAlgebra
-
-Random.seed!(1234)
 
 available_solvers = empty([Pardiso.AbstractPardisoSolver])
 if Pardiso.mkl_is_available()
@@ -27,6 +26,8 @@ else
     @warn "Not testing panua Pardiso solver"
 end
 
+const rng = StableRNG(1)
+
 @show Pardiso.MklInt
 
 println("Testing ", available_solvers)
@@ -38,9 +39,10 @@ supported_eltypes(ps::MKLPardisoSolver) = (Float32, ComplexF32, Float64, Complex
 @testset "solving" begin
 for pardiso_type in available_solvers
     ps = pardiso_type()
+    Random.seed!(rng, 1234)
     for T in supported_eltypes(ps)
-        A1 = sparse(rand(T, 10,10))
-        for B in (rand(T, 10, 2), view(rand(T, 10, 4), 1:10, 2:3))
+        A1 = sparse(rand(rng, T, 10,10))
+        for B in (rand(rng, T, 10, 2), view(rand(rng, T, 10, 4), 1:10, 2:3))
             X = similar(B)
             # Test unsymmetric, herm indef, herm posdef and symmetric
             for A in SparseMatrixCSC[A1, A1 + A1', A1'A1 + I, transpose(A1) + A1]
@@ -91,6 +93,7 @@ end
 
 if Pardiso.PARDISO_LOADED[]
 @testset "schur" begin
+    Random.seed!(rng, 1234)
     # reproduce example from Pardiso website
     include("schur_matrix_def.jl")
     @test norm(real(D) - real(C)*rA⁻¹*real(B) - s) < 1e-10*(8)^2
@@ -108,11 +111,11 @@ if Pardiso.PARDISO_LOADED[]
             set_matrixtype!(ps, 13)
         end
         for j ∈ 1:100
-            A = 5I + sprand(T,m,m,p)
+            A = 5I + sprand(rng,T,m,m,p)
             A⁻¹ = inv(Matrix(A))
-            B = sprand(T,m,n,p)
-            C = sprand(T,n,m,p)
-            D = 5I + sprand(T,n,n,p)
+            B = sprand(rng,T,m,n,p)
+            C = sprand(rng,T,n,m,p)
+            D = 5I + sprand(rng,T,n,n,p)
             M = [A B; C D]
 
             # test integer block specification
@@ -137,13 +140,14 @@ end # testset
 end
 
 @testset "error checks" begin
+Random.seed!(rng, 1234)
 for pardiso_type in available_solvers
 
     ps = pardiso_type()
 
-    A = sparse(rand(10,10))
-    B = rand(10, 2)
-    X = rand(10, 2)
+    A = sparse(rand(rng,10,10))
+    B = rand(rng, 10, 2)
+    X = rand(rng, 10, 2)
 
     if pardiso_type == PardisoSolver
         printstats(ps, A, B)
@@ -160,7 +164,7 @@ for pardiso_type in available_solvers
     X = zeros(12, 2)
     @test_throws DimensionMismatch solve!(ps,X, A, B)
 
-    B = rand(12, 2)
+    B = rand(rng, 12, 2)
     @test_throws DimensionMismatch solve(ps, A, B)
 end
 end # testset
@@ -201,9 +205,10 @@ for pardiso_type in available_solvers
 end
 
 @testset "pardiso" begin
+    Random.seed!(rng, 1234)
     for pardiso_type in available_solvers
-        A = sparse(rand(2,2) + im * rand(2,2))
-        b = rand(2)          + im * rand(2)
+        A = sparse(rand(rng,2,2) + im * rand(rng,2,2))
+        b = rand(rng,2)          + im * rand(rng,2)
         ps = pardiso_type()
         set_matrixtype!(ps, Pardiso.COMPLEX_NONSYM)
         x = Pardiso.solve(ps, A, b);

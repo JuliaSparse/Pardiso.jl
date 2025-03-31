@@ -28,7 +28,7 @@ end
 
 MKL_LOAD_FAILED = false
 
-mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED 
+mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED
 
 if LinearAlgebra.BLAS.vendor() === :mkl && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
@@ -128,7 +128,7 @@ function __init__()
     elseif MKL_jll.is_available()
         libmkl_rt[] = MKL_jll.libmkl_rt_path
     end
-    
+
     if !haskey(ENV, "PARDISOLICMESSAGE")
         ENV["PARDISOLICMESSAGE"] = 1
     end
@@ -137,7 +137,7 @@ function __init__()
         @warn "MKLROOT not set, MKL Pardiso solver will not be functional"
     end
 
-    if mkl_is_available() 
+    if mkl_is_available()
         try
             libmklpardiso = Libdl.dlopen(libmkl_rt[])
             mklpardiso_f = Libdl.dlsym(libmklpardiso, "pardiso")
@@ -146,7 +146,7 @@ function __init__()
             MKL_LOAD_FAILED = true
         end
     end
-    
+
     # This is apparently needed for MKL to not get stuck on 1 thread when
     # libpardiso is loaded in the block below...
     if libmkl_rt[] !== ""
@@ -241,6 +241,85 @@ function fix_iparm!(ps::AbstractPardisoSolver, T::Symbol)
     end
 end
 
+# Copied from SparseArrays.jl but with a tweak
+# to check symmetry of the sparsity pattern
+function _is_hermsym(A::SparseMatrixCSC, check::Function)
+    m, n = size(A)
+    if m != n; return false; end
+
+    colptr = SparseArrays.getcolptr(A)
+    rowval = rowvals(A)
+    nzval = nonzeros(A)
+    tracker = copy(SparseArrays.getcolptr(A))
+    for col in axes(A,2)
+        # `tracker` is updated such that, for symmetric matrices,
+        # the loop below starts from an element at or below the
+        # diagonal element of column `col`"
+        for p = tracker[col]:colptr[col+1]-1
+            val = nzval[p]
+            row = rowval[p]
+
+            # Ignore stored zeros
+            if iszero(val)
+                continue
+            end
+
+            # If the matrix was symmetric we should have updated
+            # the tracker to start at the diagonal or below. Here
+            # we are above the diagonal so the matrix can't be symmetric.
+            if row < col
+                return false
+            end
+
+            # Diagonal element
+            if row == col
+                if !check(val, val)
+                    return false
+                end
+            else
+                offset = tracker[row]
+
+                # If the matrix is unsymmetric, there might not exist
+                # a rowval[offset]
+                if offset > length(rowval)
+                    return false
+                end
+
+                row2 = rowval[offset]
+
+                # row2 can be less than col if the tracker didn't
+                # get updated due to stored zeros in previous elements.
+                # We therefore "catch up" here while making sure that
+                # the elements are actually zero.
+                while row2 < col
+                    if _isnotzero(nzval[offset])
+                        return false
+                    end
+                    offset += 1
+                    row2 = rowval[offset]
+                    tracker[row] += 1
+                end
+
+                # Non zero A[i,j] exists but A[j,i] does not exist
+                if row2 > col
+                    return false
+                end
+
+                # A[i,j] and A[j,i] exists
+                if row2 == col
+                    if !check(val, nzval[offset])
+                        return false
+                    end
+                    tracker[row] += 1
+                end
+            end
+        end
+    end
+    return true
+end
+
+isstructurallysymmetric(A::SparseMatrixCSC) = _is_hermsym(A, (x,y) -> true)
+
 function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
                 T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
@@ -253,38 +332,72 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
     #   - On pos def exception, solve instead with symmetric indefinite.
     # - If complex and symmetric, solve with symmetric complex solver
     # - Else solve as unsymmetric.
-    if ishermitian(A)
-        eltype(A) <: Union{Float32, Float64} ? set_matrixtype!(ps, REAL_SYM_POSDEF) : set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
-        pardisoinit(ps)
-        fix_iparm!(ps, T)
-        eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
-        try
-            pardiso(ps, X, get_matrix(ps, A, T), B)
-        catch e
-            set_phase!(ps, RELEASE_ALL)
-            pardiso(ps, X, A, B)
-            set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
-            if !isa(e, PardisoPosDefException)
-                rethrow()
-            end
-            eltype(A) <: Union{Float32, Float64} ? set_matrixtype!(ps, REAL_SYM_INDEF) : set_matrixtype!(ps, COMPLEX_HERM_INDEF)
+    if Tv <: Union{Float32, Float64}
+        if issymmetric(A)
+            set_matrixtype!(ps, REAL_SYM_POSDEF)
             pardisoinit(ps)
             fix_iparm!(ps, T)
-            eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
+            Tv == Float32 && set_iparm!(ps, 28, 1)
+            try
+                pardiso(ps, X, get_matrix(ps, A, T), B)
+            catch e
+                set_phase!(ps, RELEASE_ALL)
+                pardiso(ps, X, A, B)
+                set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
+                if !isa(e, PardisoPosDefException)
+                    rethrow()
+                end
+                set_matrixtype!(ps, REAL_SYM_INDEF)
+                pardisoinit(ps)
+                fix_iparm!(ps, T)
+                Tv == Float32 && set_iparm!(ps, 28, 1)
+                pardiso(ps, X, get_matrix(ps, A, T), B)
+            end
+        else
+            if isstructurallysymmetric(A)
+                set_matrixtype!(ps, REAL_SYM)
+            else
+                set_matrixtype!(ps, REAL_NONSYM)
+            end
+            pardisoinit(ps)
+            fix_iparm!(ps, T)
+            Tv == Float32 && set_iparm!(ps, 28, 1)
             pardiso(ps, X, get_matrix(ps, A, T), B)
         end
-    elseif issymmetric(A)
-        set_matrixtype!(ps, COMPLEX_SYM)
-        pardisoinit(ps)
-        fix_iparm!(ps, T)
-        eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
-        pardiso(ps, X, get_matrix(ps, A, T), B)
-    else
-        eltype(A) <: Union{Float32, Float64} ? set_matrixtype!(ps, REAL_NONSYM) : set_matrixtype!(ps, COMPLEX_NONSYM)
-        pardisoinit(ps)
-        fix_iparm!(ps, T)
-        eltype(A) <: Union{Float32, ComplexF32} ? set_iparm!(ps, 28, 1) : nothing
-        pardiso(ps, X, get_matrix(ps, A, T), B)
+    else # Tv <: Union{ComplexF64, ComplexF32}
+        if ishermitian(A)
+            set_matrixtype!(ps, COMPLEX_HERM_POSDEF)
+            pardisoinit(ps)
+            fix_iparm!(ps, T)
+            Tv == ComplexF32 && set_iparm!(ps, 28, 1)
+            try
+                pardiso(ps, X, get_matrix(ps, A, T), B)
+            catch e
+                set_phase!(ps, RELEASE_ALL)
+                pardiso(ps, X, A, B)
+                set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
+                if !isa(e, PardisoPosDefException)
+                    rethrow()
+                end
+                set_matrixtype!(ps, COMPLEX_HERM_INDEF)
+                pardisoinit(ps)
+                fix_iparm!(ps, T)
+                Tv == ComplexF32 && set_iparm!(ps, 28, 1)
+                pardiso(ps, X, get_matrix(ps, A, T), B)
+            end
+        else
+            if issymmetric(A)
+                set_matrixtype!(ps, COMPLEX_SYM)
+            elseif isstructurallysymmetric(A)
+                set_matrixtype!(ps, COMPLEX_STRUCT_SYM)
+            else
+                set_matrixtype!(ps, COMPLEX_NONSYM)
+            end
+            pardisoinit(ps)
+            fix_iparm!(ps, T)
+            Tv == ComplexF32 && set_iparm!(ps, 28, 1)
+            pardiso(ps, X, get_matrix(ps, A, T), B)
+        end
     end
 
     # Release memory, TODO: We are running the convert on IA and JA here
@@ -344,7 +457,7 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
     end
 
     N = size(A, 2)
-    
+
     resize!(ps.perm, size(B, 1))
 
     NRHS = size(B, 2)
