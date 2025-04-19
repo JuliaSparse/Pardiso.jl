@@ -112,9 +112,31 @@ const pardiso_chkvec = Ref{Ptr}()
 const pardiso_chkvec_z = Ref{Ptr}()
 const pardiso_get_schur_f = Ref{Ptr}()
 const PARDISO_LOADED = Ref(false)
+const PARDISO_LICENSED = Ref(false)
 
-panua_is_available() = PARDISO_LOADED[]
+function panua_is_licensed()
 
+    if !PARDISO_LOADED[]
+        return false
+    elseif PARDISO_LICENSED[]
+        return true
+    end
+    redirect_stdout(devnull) do
+        try
+            ps = PardisoSolver(;loadchecks = false)
+            pardisoinit(ps)   #errors if unlicensed
+            PARDISO_LICENSED[] = true
+            return true
+        catch e
+            return false
+        end
+    end
+end
+
+panua_is_loaded() = PARDISO_LOADED[]
+panua_is_available() = panua_is_loaded() && panua_is_licensed()
+
+    
 function __init__()
     global MKL_LOAD_FAILED
     if LOCAL_MKL_FOUND
