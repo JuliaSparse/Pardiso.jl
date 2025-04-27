@@ -1,7 +1,7 @@
 name = "Pardiso"
 uuid = "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2"
 repo = "https://github.com/JuliaSparse/Pardiso.jl.git"
-version = "1.0.0"
+version = "1.0.1"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -17,7 +17,8 @@ julia = "1.6"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "Random", "Printf", "Pkg"]
+test = ["StableRNGs", "Test", "Random", "Printf", "Pkg"]
