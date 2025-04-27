@@ -52,7 +52,8 @@ export get_matrix
 export schur_complement, pardisogetschur
 export fix_iparm!
 export mkl_is_available, panua_is_available
-export panua_is_loaded, panua_is_licensed
+
+VERSION >= v"1.11.0-DEV.469" && eval(Meta.parse("public panua_is_loaded, panua_is_licensed"))
 
 struct PardisoException <: Exception
     info::String
