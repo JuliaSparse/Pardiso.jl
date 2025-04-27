@@ -471,7 +471,6 @@ function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::Stride
 end
 
 function release!(ps::AbstractPardisoSolver)
-    @info "release"
     set_phase!(ps, RELEASE_ALL)
     pardiso(ps)
 end
