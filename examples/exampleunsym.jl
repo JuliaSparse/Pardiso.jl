@@ -81,7 +81,5 @@ function example_unsymmetric(solver=MKLPardisoSolver)
     @printf("The maximum residual for the solution X is %0.3g.\n", R)
     @test R < 1e-12
 
-    # Free the PARDISO data structures.
-    set_phase!(ps, Pardiso.RELEASE_ALL)
-    pardiso(ps)
+    # Pardiso data structures are freed automatically by finalizer
 end

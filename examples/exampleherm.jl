@@ -72,7 +72,5 @@ function example_hermitian_psd(solver=MKLPardisoSolver)
     @printf("The maximum residual for the solution is %0.3g.\n",maximum(r))
     @test norm(r) < 1e-10
 
-    # Free the PARDISO data structures.
-    set_phase!(ps, Pardiso.RELEASE_ALL)
-    pardiso(ps)
+    # Pardiso data structures are freed automatically by finalizer
 end
