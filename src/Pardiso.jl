@@ -470,6 +470,11 @@ function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::Stride
     pardiso(ps, Tv[], A, B)
 end
 
+function release!(ps::AbstractPardisoSolver)
+    set_phase!(ps, RELEASE_ALL)
+    pardiso(ps)
+end
+
 # populated rows of S determine schur complment block
 """
     schur_complement(ps,A,x) -> S
