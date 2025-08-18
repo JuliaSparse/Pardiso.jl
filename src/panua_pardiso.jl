@@ -42,7 +42,7 @@ function PardisoSolver()
     ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
                   phase, msglvl, maxfct, mnum, perm, colptr, rowval)
 
-    finalizer(release!,ps)
+    finalizer(release!, ps)
     return ps
 end
 
