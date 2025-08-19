@@ -135,7 +135,16 @@ function panua_is_licensed()
             else
                 rethrow(e)
             end
+    try
+        ps = PardisoSolver(;loadchecks = false)
+        # Suppress unwanted output from pardisoinit, which prints license info to stdout
+        redirect_stdout(devnull) do
+            pardisoinit(ps)   # errors if unlicensed
         end
+        PARDISO_LICENSED[] = true
+        return true
+    catch e
+        return false
     end
 end
 
