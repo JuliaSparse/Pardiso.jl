@@ -210,8 +210,14 @@ function set_msglvl!(ps::AbstractPardisoSolver, v::MessageLevel)
     ps.msglvl = v
 end
 
+
+
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
+    finalizer(ps) do ps
+        set_phase!(ps, RELEASE_ALL)
+        pardiso(ps)
+    end
     return
 end
 
@@ -470,20 +476,6 @@ function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::Stride
     pardiso(ps, Tv[], A, B)
 end
 
-"""
-    release!(ps::AbstractPardisoSolver)
-
-Releases all resources associated with the given Pardiso solver instance `ps`.
-This function is called automatically by the finalizer when the solver object is garbage collected,
-so users generally do not need to call it manually.
-
-# Arguments
-- `ps::AbstractPardisoSolver`: The Pardiso solver instance whose resources should be released.
-"""
-function release!(ps::AbstractPardisoSolver)
-    set_phase!(ps, RELEASE_ALL)
-    pardiso(ps)
-end
 
 # populated rows of S determine schur complment block
 """
