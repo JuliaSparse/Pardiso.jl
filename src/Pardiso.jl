@@ -130,7 +130,11 @@ function panua_is_licensed()
             PARDISO_LICENSED[] = true
             return true
         catch e
-            return false
+            if isa(e, ErrorException) && occursin(r"(?i)licen[cs]e|unlicensed|not licensed", e.msg)
+                return false
+            else
+                rethrow(e)
+            end
         end
     end
 end
