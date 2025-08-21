@@ -214,11 +214,14 @@ end
 
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
-    finalizer(ps) do ps
-        set_phase!(ps, RELEASE_ALL)
     finalizer(ps) do obj
         set_phase!(obj, RELEASE_ALL)
-        pardiso(obj)
+        try
+            pardiso(obj)
+        catch err
+            println("Error while finalizing pardiso solver object")
+            rethrow(err)
+        end
     end
     return
 end
