@@ -157,7 +157,7 @@ The number of threads used by a `PardisoSolver` can be retrieved with `get_nproc
 
 ## `LinearSolve.jl` interface
 
-To use `PardisoSolver` and `MKLPardisoSolver` in a `LinearSolve.jl` environment, see the wrapper prodived at [`LinearSolve` docs](https://docs.sciml.ai/LinearSolve/stable/solvers/solvers/#Pardiso.jl)
+Both Pardiso variants can be used as solver backends for LinearSolve, see the corresponding [documentation](https://docs.sciml.ai/LinearSolve/stable/solvers/solvers/#Pardiso.jl)
 
 ## More advanced usage.
 
