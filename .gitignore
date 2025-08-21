@@ -8,3 +8,4 @@
 /deps/*.dylib
 /deps/build.log
 Manifest.toml
+Manifest-v*.toml
