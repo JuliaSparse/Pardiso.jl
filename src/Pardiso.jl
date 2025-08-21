@@ -210,8 +210,19 @@ function set_msglvl!(ps::AbstractPardisoSolver, v::MessageLevel)
     ps.msglvl = v
 end
 
+
+
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
+    finalizer(ps) do obj
+        set_phase!(obj, RELEASE_ALL)
+        try
+            pardiso(obj)
+        catch err
+            println("Error while finalizing pardiso solver object")
+            rethrow(err)
+        end
+    end
     return
 end
 
@@ -469,6 +480,7 @@ pardiso(ps::AbstractPardisoSolver) = ccall_pardiso(ps, Int32(0), Float64[], Int3
 function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     pardiso(ps, Tv[], A, B)
 end
+
 
 # populated rows of S determine schur complment block
 """
