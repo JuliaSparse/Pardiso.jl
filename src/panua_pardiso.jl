@@ -13,9 +13,13 @@ mutable struct PardisoSolver <: AbstractPardisoSolver
     rowval::Vector{Int32}
 end
 
-function PardisoSolver()
-    if !panua_is_available()
-      error("Panua pardiso library was not loaded")
+function PardisoSolver(; loadchecks::Bool = true)
+    if loadchecks
+        if !panua_is_loaded()
+        error("Panua pardiso library was not loaded")
+        elseif !panua_is_licensed()
+        error("Panua pardiso library requires license")
+        end
     end
 
     pt = zeros(Int, 64)
