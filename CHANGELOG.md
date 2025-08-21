@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.0] - 2025-08-21
+
+- added `panua_is_loaded()` and `panua_is_licensed()` methods (#116)
+- add finalizers to Pardiso structs (#117)
+
 ## [1.0.0] - 2025-01-24
 
 ### Breaking
