@@ -216,7 +216,9 @@ function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
     finalizer(ps) do ps
         set_phase!(ps, RELEASE_ALL)
-        pardiso(ps)
+    finalizer(ps) do obj
+        set_phase!(obj, RELEASE_ALL)
+        pardiso(obj)
     end
     return
 end
