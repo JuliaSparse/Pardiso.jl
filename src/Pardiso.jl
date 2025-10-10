@@ -30,7 +30,15 @@ MKL_LOAD_FAILED = false
 
 mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED
 
-if all(occursin("mkl", basename(x.libname)) for x in BLAS.get_config().loaded_libs) && LinearAlgebra.BlasInt == Int64
+# Copied from RecursiveFactorization.jl
+const blaslib = if VERSION ≥ v"1.7.0-beta2"
+    config = BLAS.get_config().loaded_libs
+    occursin("mkl_rt", config[1].libname) ? :MKL : :OpenBLAS
+else
+    BLAS.vendor() === :mkl ? :MKL : :OpenBLAS
+end
+
+if blaslib == :MKL && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
     const PARDISO_FUNC = :pardiso_64
 else
