@@ -28,7 +28,8 @@ end
 
 const rng = StableRNG(1)
 
-@show LinearAlgebra.BLAS.vendor()
+@show BLAS.get_config()
+@show BLAS.vendor()
 @show LinearAlgebra.BlasInt
 @show Pardiso.MklInt
 @show Pardiso.PARDISO_FUNC

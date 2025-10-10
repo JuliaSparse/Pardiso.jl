@@ -30,7 +30,7 @@ MKL_LOAD_FAILED = false
 
 mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED
 
-if LinearAlgebra.BLAS.vendor() in (:mkl, :lbt) && LinearAlgebra.BlasInt == Int64
+if all(occursin("mkl", basename(x.libname)) for x in BLAS.get_config().loaded_libs) && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
     const PARDISO_FUNC = :pardiso_64
 else
