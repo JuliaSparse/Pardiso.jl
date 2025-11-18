@@ -283,6 +283,9 @@ end
 
 # Copied from SparseArrays.jl but with a tweak
 # to check symmetry of the sparsity pattern
+@inline _isnotzero(x) = iszero(x) !== true # like `!iszero(x)`, but handles `x::Missing`
+@inline _isnotzero(x::Number) = !iszero(x)
+@inline _isnotzero(x::AbstractArray) = !iszero(x)
 function _is_hermsym(A::SparseMatrixCSC, check::Function)
     m, n = size(A)
     if m != n; return false; end
