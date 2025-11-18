@@ -20,7 +20,7 @@ library.
 
 ### MKL PARDISO
 
-By default, when adding "Pardiso.jl" to the active environmnent, Julia will automatically install a suitable MKL for your platform by loading `MKL_jll.jl`.
+By default, when adding "Pardiso.jl" to the active environment, Julia will automatically install a suitable MKL for your platform by loading `MKL_jll.jl`.
 Note that if you use a mac you will need to pin `MKL_jll` to version 2023.
 
 If you instead use a self installed MKL, follow these instructions:
@@ -37,7 +37,7 @@ If you instead use a self installed MKL, follow these instructions:
 ### PARDISO from [panua.ch](https://panua.ch) ("PanuaPardiso", formerly "ProjectPardiso")
 
 * Unzip the download file `panua-pardiso-yyyymmdd-os.zip` to some folder and set the environment variable `JULIA_PARDISO` to the `lib` subdirectory of this folder.  For example, create an entry `ENV["JULIA_PARDISO"] = "/Users/Someone/panua-pardiso-yyyymmdd-os/lib"` in `.julia/config/startup.jl`. If you have a valid license for the predecessor from pardiso-project.org, put the PARDISO library to a subdirectory denoted by `ENV["JULIA_PARDISO"]` and
-  evenutally rename it to `libpardiso.so`.
+  eventually rename it to `libpardiso.so`.
 * Perform the platform specific steps described below
 * Run `Pkg.build("Pardiso", verbose=true)`
 * Eventually, run `Pardiso.show_build_log()` to see the build log for additional information.
@@ -196,7 +196,7 @@ The matrix type can be explicitly set with `set_matrixtype!(ps, key)` where the 
 The matrix type for a solver can be retrieved with `get_matrixtype(ps)`.
 
 ### Setting the solver (PanuaPardiso only)
-PanuatPardiso supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
+PanuaPardiso supports direct and iterative solvers. The solver is set with `set_solver!(ps, key)` where the key has the following meaning:
 
 | enum               | integer | Solver                           |
 |--------------------|---------|----------------------------------|

@@ -29,7 +29,7 @@ function PardisoSolver(; loadchecks::Bool = true)
     solver = DIRECT_SOLVER
     phase = ANALYSIS_NUM_FACT_SOLVE_REFINE
     msglvl = MESSAGE_LEVEL_OFF
-    # Set numper of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
+    # Set number of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
     if haskey(ENV, "OMP_NUM_THREADS")
         iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
     else
@@ -58,8 +58,6 @@ show(io::IO, ps::PardisoSolver) = print(io, string("$PardisoSolver:\n",
 
 
 phases(ps::PardisoSolver) = PHASES
-
-set_transposed(ps::PardisoSolver, t::Bool) = t ? set_iparm(ps, 12, 1) : set_iparm(ps, 12, 0)
 
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
