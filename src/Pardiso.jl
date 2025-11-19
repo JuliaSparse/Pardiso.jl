@@ -38,7 +38,7 @@ else
     const PARDISO_FUNC = :pardiso
 end
 
-libmkl_rt::String = ""
+libmkl_rt = ""
 
 export PardisoSolver, MKLPardisoSolver
 export set_iparm!, set_dparm!, set_matrixtype!, set_solver!, set_phase!, set_msglvl!, set_nprocs!
