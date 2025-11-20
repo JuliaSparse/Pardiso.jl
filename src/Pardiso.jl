@@ -38,7 +38,7 @@ else
     const PARDISO_FUNC = :pardiso
 end
 
-const libmkl_rt = Ref{String}("")
+libmkl_rt = ""
 
 export PardisoSolver, MKLPardisoSolver
 export set_iparm!, set_dparm!, set_matrixtype!, set_solver!, set_phase!, set_msglvl!, set_nprocs!
@@ -145,17 +145,17 @@ panua_is_available() = panua_is_loaded() && panua_is_licensed()
 
     
 function __init__()
-    global MKL_LOAD_FAILED
+    global MKL_LOAD_FAILED, libmkl_rt
     if LOCAL_MKL_FOUND
         if Sys.iswindows()
-            libmkl_rt[] = "mkl_rt"
+            libmkl_rt = "mkl_rt"
         elseif Sys.isapple()
-            libmkl_rt[] = "@rpath/libmkl_rt.dylib"
+            libmkl_rt = "@rpath/libmkl_rt.dylib"
         else
-            libmkl_rt[] = "libmkl_rt"
+            libmkl_rt = "libmkl_rt"
         end
     elseif MKL_jll.is_available()
-        libmkl_rt[] = MKL_jll.libmkl_rt_path
+        libmkl_rt = MKL_jll.libmkl_rt
     end
 
     if !haskey(ENV, "PARDISOLICMESSAGE")
@@ -168,7 +168,7 @@ function __init__()
 
     if mkl_is_available()
         try
-            libmklpardiso = Libdl.dlopen(libmkl_rt[])
+            libmklpardiso = Libdl.dlopen(libmkl_rt)
             mklpardiso_f = Libdl.dlsym(libmklpardiso, "pardiso")
         catch e
             @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
@@ -178,7 +178,7 @@ function __init__()
 
     # This is apparently needed for MKL to not get stuck on 1 thread when
     # libpardiso is loaded in the block below...
-    if libmkl_rt[] !== ""
+    if libmkl_rt !== ""
         get_nprocs_mkl()
     end
 

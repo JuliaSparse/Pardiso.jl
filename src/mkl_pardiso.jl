@@ -38,17 +38,17 @@ show(io::IO, ps::MKLPardisoSolver) = print(io, string("$MKLPardisoSolver:\n",
 
 set_nprocs!(ps::MKLPardisoSolver, n::Integer) = set_nprocs_mkl!(n)
 set_nprocs_mkl!(n::Integer) =
-    ccall((:mkl_domain_set_num_threads, libmkl_rt[]), Cvoid, (Ptr{Int32}, Ptr{Int32}), Ref((Int32(n))), Ref(MKL_DOMAIN_PARDISO))
+    ccall((:mkl_domain_set_num_threads, libmkl_rt), Cvoid, (Ptr{Int32}, Ptr{Int32}), Ref((Int32(n))), Ref(MKL_DOMAIN_PARDISO))
 get_nprocs(ps::MKLPardisoSolver) = get_nprocs_mkl()
 get_nprocs_mkl() =
-    ccall((:mkl_domain_get_max_threads, libmkl_rt[]), Int32, (Ptr{Int32},), Ref(MKL_DOMAIN_PARDISO))
+    ccall((:mkl_domain_get_max_threads, libmkl_rt), Int32, (Ptr{Int32},), Ref(MKL_DOMAIN_PARDISO))
 
 valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
 phases(ps::MKLPardisoSolver) = MKL_PHASES
 
 function ccall_pardisoinit(ps::MKLPardisoSolver)
     ERR = Ref{MklInt}(0)
-    ccall((:pardisoinit, libmkl_rt[]), Cvoid,
+    ccall((:pardisoinit, libmkl_rt), Cvoid,
           (Ptr{Int}, Ptr{MklInt}, Ptr{MklInt}),
           ps.pt, Ref(MklInt(ps.mtype)), ps.iparm)
     check_error(ps, ERR[])
@@ -63,7 +63,7 @@ function ccall_pardiso(ps::MKLPardisoSolver, N, nzval::Vector{Tv}, colptr, rowva
     NRHS = MklInt(NRHS)
 
     ERR = Ref{MklInt}(0)
-    ccall((PARDISO_FUNC, libmkl_rt[]), Cvoid,
+    ccall((PARDISO_FUNC, libmkl_rt), Cvoid,
           (Ptr{Int}, Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt},
            Ptr{MklInt}, Ptr{Tv}, Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt},
            Ptr{MklInt}, Ptr{MklInt}, Ptr{MklInt}, Ptr{Tv}, Ptr{Tv},
