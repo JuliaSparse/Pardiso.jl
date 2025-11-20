@@ -143,7 +143,7 @@ end
 panua_is_loaded() = PARDISO_LOADED[]
 panua_is_available() = panua_is_loaded() && panua_is_licensed()
 
-    
+
 function __init__()
     global MKL_LOAD_FAILED, libmkl_rt
     if LOCAL_MKL_FOUND
@@ -223,7 +223,9 @@ get_maxfct(ps::AbstractPardisoSolver) = ps.maxfct
 set_maxfct!(ps::AbstractPardisoSolver, maxfct::Integer) = ps.maxfct = maxfct
 
 get_perm(ps::AbstractPardisoSolver) = ps.perm
-set_perm!(ps::AbstractPardisoSolver, perm::Vector{T}) where {T <: Integer} = ps.perm = convert(Vector{Int32}, perm)
+function set_perm!(ps::AbstractPardisoSolver, perm::Vector{T}) where {T <: Integer}
+    ps.perm = convert(Vector{eltype(ps.perm)}, perm)
+end
 
 get_phase(ps::AbstractPardisoSolver) = ps.phase
 
@@ -514,14 +516,14 @@ function pardiso(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti}, B::Stride
 end
 
 
-# populated rows of S determine schur complment block
+# populated rows of S determine schur complement block
 """
     schur_complement(ps,A,x) -> S
 
 Schur complement `S` of the submatrix defined by the nonzero entries of `x` in matrix `A`.
 If `n=nnz(x)`, then `S` is `n`-by-`n`.
 
-WARNING: for complex `M`, seems to be unstable, made worse as number of nonzero elements in `M` decreases
+WARNING: for complex `A`, seems to be unstable, made worse as number of nonzero elements in `A` decreases.
 """
 schur_complement(ps::AbstractPardisoSolver,A,x::SparseVector,T::Symbol=:N) = _schur_complement_permuted(ps,A,x.nzind,T)
 schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(x.rowval)),T)
