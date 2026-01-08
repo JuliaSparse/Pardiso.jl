@@ -28,7 +28,10 @@ end
 
 const rng = StableRNG(1)
 
+@show Pardiso.blaslib
+@show LinearAlgebra.BlasInt
 @show Pardiso.MklInt
+@show Pardiso.PARDISO_FUNC
 
 println("Testing ", available_solvers)
 
