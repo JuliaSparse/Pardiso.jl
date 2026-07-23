@@ -2,7 +2,8 @@ ENV["OMP_NUM_THREADS"] = 2
 
 
 using Pkg
-if Sys.isapple()
+# MKL_jll versions after 2023 do not work on (Intel) macs
+if Sys.isapple() && Sys.ARCH === :x86_64
     Pkg.add(name="MKL_jll"; version = "2023")
 end
 
@@ -18,11 +19,19 @@ available_solvers = empty([Pardiso.AbstractPardisoSolver])
 if Pardiso.mkl_is_available()
     push!(available_solvers, MKLPardisoSolver)
 else
+    # CI jobs that are expected to have a working MKL should fail instead of
+    # silently skipping all solver tests
+    if get(ENV, "PARDISO_TEST_EXPECT_MKL", "false") == "true"
+        error("PARDISO_TEST_EXPECT_MKL is set but MKL is not available")
+    end
     @warn "Not testing MKL Pardiso solver"
 end
 if Pardiso.PARDISO_LOADED[]
     push!(available_solvers, PardisoSolver)
 else
+    if get(ENV, "PARDISO_TEST_EXPECT_PANUA", "false") == "true"
+        error("PARDISO_TEST_EXPECT_PANUA is set but Panua Pardiso is not available")
+    end
     @warn "Not testing panua Pardiso solver"
 end
 
@@ -31,6 +40,21 @@ const rng = StableRNG(1)
 @show Pardiso.MklInt
 
 println("Testing ", available_solvers)
+
+# These do not require a solver library and always run
+@testset "isstructurallysymmetric" begin
+    A = sparse([1, 2, 2], [2, 1, 2], [1.0, 2.0, 3.0], 2, 2)
+    @test Pardiso.isstructurallysymmetric(A)
+    A = sparse([1], [2], [1.0], 2, 2)
+    @test !Pardiso.isstructurallysymmetric(A)
+
+    # Stored (structural) zeros are ignored and must not cause
+    # out of bounds access when a column runs out of stored entries
+    A = sparse([3, 1], [2, 3], [1.0, 0.0], 3, 3)
+    @test !Pardiso.isstructurallysymmetric(A)
+    A = sparse([1, 2], [2, 1], [0.0, 0.0], 2, 2)
+    @test Pardiso.isstructurallysymmetric(A)
+end
 
 supported_eltypes(ps::PardisoSolver) = (Float64, ComplexF64)
 supported_eltypes(ps::MKLPardisoSolver) = (Float32, ComplexF32, Float64, ComplexF64)
@@ -135,6 +159,35 @@ if Pardiso.PARDISO_LOADED[]
             S = schur_complement(ps, M, x);
             @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
         end
+
+        A = 5I + sprand(rng,T,m,m,p)
+        B = sprand(rng,T,m,n,p)
+        C = sprand(rng,T,n,m,p)
+        D = 5I + sprand(rng,T,n,n,p)
+        M = [A B; C D]
+
+        # invalid inputs are rejected before any solver state is touched
+        @test_throws ArgumentError schur_complement(ps, M, -1)
+        @test_throws ArgumentError schur_complement(ps, M, m + n)
+        @test_throws ArgumentError schur_complement(ps, M, n, :Q)
+
+        # solver state is restored after the call
+        original_iparms = copy(get_iparms(ps))
+        original_phase = get_phase(ps)
+        schur_complement(ps, M, n)
+        @test get_iparms(ps) == original_iparms
+        @test get_phase(ps) == original_phase
+
+        # the block-defining sparse input must not be modified, also when
+        # its rowvals are unsorted across columns
+        x = spzeros(T, m+n, 2)
+        x[m+2, 1] = 1
+        x[m+1, 2] = 1
+        xcolptr, xrowval, xnzval = copy(x.colptr), copy(x.rowval), copy(x.nzval)
+        schur_complement(ps, M, x)
+        @test x.colptr == xcolptr
+        @test x.rowval == xrowval
+        @test x.nzval == xnzval
     end
 end # testset
 end
@@ -163,6 +216,23 @@ for pardiso_type in available_solvers
     set_matrixtype!(ps, 11)
     X = zeros(12, 2)
     @test_throws DimensionMismatch solve!(ps,X, A, B)
+
+    # Non-contiguous output storage is not supported
+    Xbad = view(zeros(12, 2), 1:10, :)
+    @test_throws DimensionMismatch solve!(ps, Xbad, A, B)
+
+    # A phase that computes a solution requires a valid output buffer
+    set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT_SOLVE_REFINE)
+    @test_throws DimensionMismatch pardiso(ps, A, B)
+    set_phase!(ps, Pardiso.ANALYSIS)
+    pardiso(ps, A, B) # accepts an empty dummy X
+    set_phase!(ps, Pardiso.RELEASE_ALL)
+    pardiso(ps)
+    set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT_SOLVE_REFINE)
+
+    if pardiso_type == PardisoSolver
+        @test_throws ArgumentError set_nprocs!(ps, 2)
+    end
 
     B = rand(rng, 12, 2)
     @test_throws DimensionMismatch solve(ps, A, B)

@@ -49,7 +49,6 @@ function find_paradisolib()
                     println("    found \"$(abspath(path))\", attempting to load it...")
                     Libdl.dlopen(path, Libdl.RTLD_GLOBAL)
                     println("    loaded successfully!")
-                    global PARDISO_LIB_FOUND = true
                     return path, true
                 end
             catch e

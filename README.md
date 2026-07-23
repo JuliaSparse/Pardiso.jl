@@ -21,7 +21,8 @@ library.
 ### MKL PARDISO
 
 By default, when adding "Pardiso.jl" to the active environment, Julia will automatically install a suitable MKL for your platform by loading `MKL_jll.jl`.
-Note that if you use a mac you will need to pin `MKL_jll` to version 2023.
+Note that if you use an Intel mac you will need to pin `MKL_jll` to version 2023.
+MKL is not available for Apple Silicon macs, so only the PanuaPardiso backend can be used there.
 
 If you instead use a self installed MKL, follow these instructions:
 
@@ -65,10 +66,12 @@ Solving equations is done with the `solve` and `solve!` functions. They have the
 
 The symbols `:T` or `:C` can be added as an extra argument to solve the transposed or the conjugate transposed system of equations, respectively.
 
-Here is an example of solving a system of real equations with two right-hand sides:
+Here is an example of solving a system of real equations with two right-hand sides
+(using the MKL solver, which is available without a license; for PanuaPardiso use
+`PardisoSolver()` instead):
 
 ```jl
-ps = PardisoSolver()
+ps = MKLPardisoSolver()
 
 A = sparse(rand(10, 10))
 B = rand(10, 2)
@@ -288,7 +291,7 @@ To use the low-level API to compute the Schur complement:
 
 ### Potential "gotchas"
 
-* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARAM[12]`) should be set to 1.
+* Julia uses CSC sparse matrices while PARDISO expects a CSR matrix. These can be seen as transposes of each other so to solve `AX = B` the transpose flag (`IPARM[12]`) should be set to 1 for PanuaPardiso and to 2 for MKL PARDISO (in MKL, 1 means conjugate transpose). The `fix_iparm!(ps, T)` function sets this up correctly for the given solver.
 * For **symmetric** matrices, PARDISO needs to have the diagonal stored in the sparse structure even if the diagonal element happens to be 0. The manual recommends adding an `eps` to the diagonal when you suspect you might have 0 values diagonal elements that are not stored in the sparse structure.
 * Unless `IPARM[1] = 1`, all values in `IPARM` will be ignored and default values are used.
 * When solving a symmetric matrix, Pardiso expects only the upper triangular part. Since Julia has CSC matrices this means you should pass in `tril(A)` to the `pardiso` function. Use `checkmatrix` to see that you managed to get the matrix in a valid format.

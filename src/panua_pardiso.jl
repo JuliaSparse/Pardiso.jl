@@ -29,13 +29,14 @@ function PardisoSolver(; loadchecks::Bool = true)
     solver = DIRECT_SOLVER
     phase = ANALYSIS_NUM_FACT_SOLVE_REFINE
     msglvl = MESSAGE_LEVEL_OFF
-    # Set number of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
-    if haskey(ENV, "OMP_NUM_THREADS")
-        iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
-    else
+    # Set number of processors from "OMP_NUM_THREADS" if it is set and parses
+    # as a single number (it can also hold a comma-separated list of values)
+    nthreads = tryparse(Int, get(ENV, "OMP_NUM_THREADS", ""))
+    if nthreads === nothing
         # Assume 2 threads per core
-        iparm[3] = max(div(Sys.CPU_THREADS, 2), 1)
+        nthreads = max(div(Sys.CPU_THREADS, 2), 1)
     end
+    iparm[3] = nthreads
 
     mnum = 1
     maxfct = 1
@@ -45,6 +46,7 @@ function PardisoSolver(; loadchecks::Bool = true)
 
     ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
                   phase, msglvl, maxfct, mnum, perm, colptr, rowval)
+    finalizer(finalize_solver!, ps)
     return ps
 end
 
@@ -57,12 +59,14 @@ show(io::IO, ps::PardisoSolver) = print(io, string("$PardisoSolver:\n",
 
 
 
-phases(ps::PardisoSolver) = PHASES
-
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
 set_dparm!(ps::PardisoSolver, i::Integer, v::AbstractFloat) = ps.dparm[i] = v
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
+set_nprocs!(ps::PardisoSolver, n::Integer) =
+    throw(ArgumentError(string("PardisoSolver reads the number of threads from the OMP_NUM_THREADS ",
+                               "environment variable when the solver is created and it cannot be ",
+                               "changed afterwards")))
 
 set_solver!(ps::PardisoSolver, v::Int) = set_solver!(ps, Solver(v))
 function set_solver!(ps::PardisoSolver, v::Solver)
@@ -86,7 +90,7 @@ end
 
     N = Int32(N)
     # Save new colptr and rowvals if a new analysis phase is run
-    if ps.phase in [ANALYSIS, ANALYSIS_NUM_FACT, ANALYSIS_NUM_FACT_SOLVE_REFINE]
+    if ps.phase in (ANALYSIS, ANALYSIS_NUM_FACT, ANALYSIS_NUM_FACT_SOLVE_REFINE)
         ps.colptr = convert(Vector{Int32}, colptr)
         ps.rowval = convert(Vector{Int32}, rowval)
     end
@@ -124,8 +128,8 @@ function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                     B::StridedVecOrMat{Tv}) where {Ti,Tv <: PardisoNumTypes}
     N = Int32(size(A, 2))
     AA = A.nzval
-    IA = ps.colptr
-    JA = ps.rowval
+    IA = convert(Vector{Int32}, A.colptr)
+    JA = convert(Vector{Int32}, A.rowval)
     NRHS = Int32(size(B, 2))
     ERR = Ref{Int32}(0)
     if Tv <: Complex

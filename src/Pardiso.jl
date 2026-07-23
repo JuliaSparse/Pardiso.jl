@@ -1,5 +1,3 @@
-__precompile__()
-
 module Pardiso
 
 if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
@@ -26,10 +24,12 @@ if !LOCAL_MKL_FOUND
     import MKL_jll
 end
 
-MKL_LOAD_FAILED = false
+const MKL_LOAD_FAILED = Ref(false)
 
-mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED
+mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED[]
 
+# On Julia >= 1.7 (libblastrampoline) `BLAS.vendor()` always returns `:lbt`, so
+# this branch is only taken on Julia 1.6 binaries built directly against 64-bit MKL.
 if LinearAlgebra.BLAS.vendor() === :mkl && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
     const PARDISO_FUNC = :pardiso_64
@@ -145,7 +145,7 @@ panua_is_available() = panua_is_loaded() && panua_is_licensed()
 
 
 function __init__()
-    global MKL_LOAD_FAILED, libmkl_rt
+    global libmkl_rt
     if LOCAL_MKL_FOUND
         if Sys.iswindows()
             libmkl_rt = "mkl_rt"
@@ -172,7 +172,7 @@ function __init__()
             mklpardiso_f = Libdl.dlsym(libmklpardiso, "pardiso")
         catch e
             @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
-            MKL_LOAD_FAILED = true
+            MKL_LOAD_FAILED[] = true
         end
     end
 
@@ -243,21 +243,43 @@ end
 
 
 
+"""
+    pardisoinit(ps)
+
+Initialize the `iparm` (and for `PardisoSolver` the `dparm`) values of `ps` to
+the library defaults for the currently set matrix type and solver.
+"""
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
-    finalizer(ps) do obj
-        set_phase!(obj, RELEASE_ALL)
+    return
+end
+
+# Registered as a finalizer on solver objects in their constructors.
+# Finalizers may not yield (so no printing) and this releases the internal
+# library memory at GC if the solver has been initialized.
+function finalize_solver!(ps::AbstractPardisoSolver)
+    if any(!iszero, ps.pt)
+        set_phase!(ps, RELEASE_ALL)
         try
-            pardiso(obj)
-        catch err
-            println("Error while finalizing pardiso solver object")
-            rethrow(err)
+            pardiso(ps)
+        catch
         end
     end
     return
 end
 
 
+"""
+    solve(ps, A, B, T=:N) -> X
+
+Solve `AX = B` using the Pardiso solver `ps` and return the solution `X`.
+`T` selects the system to solve: `:N` solves `AX = B`, `:T` solves
+`transpose(A)X = B` and `:C` solves `adjoint(A)X = B`.
+
+The matrix type is chosen automatically based on the symmetry of `A` and the
+factorization is not kept afterwards; see the README for how to reuse
+factorizations via `pardiso` directly.
+"""
 function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
                B::StridedVecOrMat{Tv}, T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
     X = copy(B)
@@ -324,9 +346,10 @@ function _is_hermsym(A::SparseMatrixCSC, check::Function)
             else
                 offset = tracker[row]
 
-                # If the matrix is unsymmetric, there might not exist
-                # a rowval[offset]
-                if offset > length(rowval)
+                # If the matrix is unsymmetric, the tracker may have moved
+                # past the last stored entry of column `row`, meaning the
+                # partner entry A[col, row] does not exist
+                if offset > colptr[row+1] - 1
                     return false
                 end
 
@@ -341,8 +364,13 @@ function _is_hermsym(A::SparseMatrixCSC, check::Function)
                         return false
                     end
                     offset += 1
-                    row2 = rowval[offset]
                     tracker[row] += 1
+                    # Column `row` ran out of stored entries before
+                    # reaching row `col`, so A[col, row] does not exist
+                    if offset > colptr[row+1] - 1
+                        return false
+                    end
+                    row2 = rowval[offset]
                 end
 
                 # Non zero A[i,j] exists but A[j,i] does not exist
@@ -365,6 +393,12 @@ end
 
 isstructurallysymmetric(A::SparseMatrixCSC) = _is_hermsym(A, (x,y) -> true)
 
+"""
+    solve!(ps, X, A, B, T=:N) -> X
+
+Like [`solve`](@ref) but stores the solution in the preallocated `X`, which
+must have the same size as `B` and be memory-contiguous.
+"""
 function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
                 T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
@@ -386,8 +420,13 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
             try
                 pardiso(ps, X, get_matrix(ps, A, T), B)
             catch e
-                set_phase!(ps, RELEASE_ALL)
-                pardiso(ps, X, A, B)
+                # Release memory without masking the original error if the
+                # release call itself fails.
+                try
+                    set_phase!(ps, RELEASE_ALL)
+                    pardiso(ps, X, A, B)
+                catch
+                end
                 set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
                 if !isa(e, PardisoPosDefException)
                     rethrow()
@@ -418,8 +457,13 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
             try
                 pardiso(ps, X, get_matrix(ps, A, T), B)
             catch e
-                set_phase!(ps, RELEASE_ALL)
-                pardiso(ps, X, A, B)
+                # Release memory without masking the original error if the
+                # release call itself fails.
+                try
+                    set_phase!(ps, RELEASE_ALL)
+                    pardiso(ps, X, A, B)
+                catch
+                end
                 set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
                 if !isa(e, PardisoPosDefException)
                     rethrow()
@@ -480,9 +524,20 @@ function get_matrix(ps::AbstractPardisoSolver, A, T)
     error("Unhandled matrix type")
 end
 
+"""
+    pardiso(ps, X, A, B)
+
+Call the Pardiso library directly, running the currently set phase with the
+currently set matrix type and iparms of `ps`, storing any computed solution
+in `X`. This is the low-level entry point for advanced usage; see the README
+for details. For phases that do not compute a solution, `X` may be an empty
+array.
+"""
 function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},
                  B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
-    if length(X) != 0
+    # For phases that write a solution, X must always be a valid output
+    # buffer; for other phases it is allowed to be an empty dummy array.
+    if length(X) != 0 || is_solve_phase(get_phase(ps))
         dim_check(X, A, B)
     end
 
@@ -502,8 +557,6 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
     end
 
     N = size(A, 2)
-
-    resize!(ps.perm, size(B, 1))
 
     NRHS = size(B, 2)
 
@@ -525,8 +578,8 @@ If `n=nnz(x)`, then `S` is `n`-by-`n`.
 
 WARNING: for complex `A`, seems to be unstable, made worse as number of nonzero elements in `A` decreases.
 """
-schur_complement(ps::AbstractPardisoSolver,A,x::SparseVector,T::Symbol=:N) = _schur_complement_permuted(ps,A,x.nzind,T)
-schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(x.rowval)),T)
+schur_complement(ps::PardisoSolver,A,x::SparseVector,T::Symbol=:N) = _schur_complement_permuted(ps,A,x.nzind,T)
+schur_complement(ps::PardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(copy(rowvals(x)))),T)
 
 # permute A and then compute complement of lower right-hand `n`-by-`n` block
 function _schur_complement_permuted(ps,A,rows,T::Symbol)
@@ -541,14 +594,16 @@ Schur complement `S` of upper-left block in `M`, where `n` is the size of lower-
 
 WARNING: for complex `M`, seems to be unstable, made worse as number of nonzero elements in `M` decreases
 """
-function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::Integer,T::Symbol=:N) where Tv <: PardisoNumTypes
-
-    n ≥ size(A,1) ? throw(ErrorException("complement block size n=$n≥A.m=$(A.m)")) : nothing
+function schur_complement(ps::PardisoSolver,A::SparseMatrixCSC{Tv},n::Integer,T::Symbol=:N) where Tv <: PardisoNumTypes
+    # Validate all inputs before mutating any solver state
+    LinearAlgebra.checksquare(A)
+    0 <= n < size(A,1) || throw(ArgumentError("complement block size n=$n must satisfy 0 ≤ n < $(size(A,1))"))
+    T in (:N, :T, :C) || throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
     # Tv<:Complex ? (@warn "unstable for complex types, unknown why") : nothing
 
-    pardisoinit(ps)
     original_phase = get_phase(ps)
-    original_iparms = get_iparms(ps)
+    original_iparms = copy(get_iparms(ps))
+    pardisoinit(ps)
     set_iparm!(ps,1,1) # use custom IPARM
     set_iparm!(ps,38,n) # set Schur complement block size to n
     set_phase!(ps,12) # analyze and factorize
@@ -561,21 +616,27 @@ function schur_complement(ps::AbstractPardisoSolver,A::SparseMatrixCSC{Tv},n::In
     elseif T == :C
         M = conj(permutedims(A))
         set_iparm!(ps, 12, 0)
-    elseif T == :T
+    else # T == :T
         M = A
         set_iparm!(ps, 12, 0)
-    else
-        throw(ArgumentError("only :T, :N and :C, are valid transpose symbols"))
     end
 
-    pardiso(ps,B,M,B)
-    S = pardisogetschur(ps) # get schur complement matrix
-
-    set_phase!(ps, RELEASE_ALL)
-    pardiso(ps, B, M, B)
-    set_phase!(ps, original_phase) # reset phase to user setting
-    for i ∈ eachindex(original_iparms)
-        set_iparm!(ps,i,original_iparms[i])
+    local S
+    try
+        pardiso(ps,B,M,B)
+        S = pardisogetschur(ps) # get schur complement matrix
+    finally
+        # Release internal memory and restore the solver state the user had
+        # before the call, also when the factorization errors.
+        try
+            set_phase!(ps, RELEASE_ALL)
+            pardiso(ps, B, M, B)
+        catch
+        end
+        set_phase!(ps, original_phase) # reset phase to user setting
+        for i ∈ eachindex(original_iparms)
+            set_iparm!(ps,i,original_iparms[i])
+        end
     end
 
     return S
@@ -586,7 +647,7 @@ end
 
 retrieve schur complement from PardisoSolver `ps`.
 """
-function pardisogetschur(ps::AbstractPardisoSolver)
+function pardisogetschur(ps::PardisoSolver)
     nnzschur = get_iparm(ps, 39)
     nschur = get_iparm(ps,38)
     T = isreal(get_matrixtype(ps)) ? Float64 : ComplexF64
@@ -594,10 +655,14 @@ function pardisogetschur(ps::AbstractPardisoSolver)
         return spzeros(T,nschur,nschur)
     else
         S = Vector{T}(undef,nnzschur)
-        IS = Vector{Int32}(undef,nschur)
+        # A CSR row pointer has nschur+1 entries, so size the buffer to
+        # nschur+1 in case the library writes all of them. The library has
+        # been observed to return the row pointer without its leading 1, so
+        # the row pointer is reconstructed from the first nschur entries.
+        IS = Vector{Int32}(undef,nschur+1)
         JS = Vector{Int32}(undef,nnzschur)
         ccall_pardiso_get_schur(ps,S,IS,JS)
-        IS = pushfirst!(IS,Int32(1)) # some issue with IS (nschur+1 doesn't seem to work)
+        IS = pushfirst!(IS[1:nschur],Int32(1))
         S = permutedims(SparseMatrixCSC(nschur,nschur,IS,JS,S)) # really constructing CSR and then transposing
         return S
     end
@@ -611,6 +676,8 @@ function dim_check(X, A, B)
                                                                "rows, RHS has $(size(B,1)) rows.")))
     size(B, 1) == stride(B, 2) || throw(DimensionMismatch(
                                             string("Only memory-contiguous RHS supported")))
+    size(X, 1) == stride(X, 2) || throw(DimensionMismatch(
+                                            string("Only memory-contiguous solution storage supported")))
 end
 
 end # module
