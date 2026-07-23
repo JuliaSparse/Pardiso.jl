@@ -397,8 +397,13 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
             try
                 pardiso(ps, X, get_matrix(ps, A, T), B)
             catch e
-                set_phase!(ps, RELEASE_ALL)
-                pardiso(ps, X, A, B)
+                # Release memory without masking the original error if the
+                # release call itself fails.
+                try
+                    set_phase!(ps, RELEASE_ALL)
+                    pardiso(ps, X, A, B)
+                catch
+                end
                 set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
                 if !isa(e, PardisoPosDefException)
                     rethrow()
@@ -429,8 +434,13 @@ function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
             try
                 pardiso(ps, X, get_matrix(ps, A, T), B)
             catch e
-                set_phase!(ps, RELEASE_ALL)
-                pardiso(ps, X, A, B)
+                # Release memory without masking the original error if the
+                # release call itself fails.
+                try
+                    set_phase!(ps, RELEASE_ALL)
+                    pardiso(ps, X, A, B)
+                catch
+                end
                 set_phase!(ps, ANALYSIS_NUM_FACT_SOLVE_REFINE)
                 if !isa(e, PardisoPosDefException)
                     rethrow()
