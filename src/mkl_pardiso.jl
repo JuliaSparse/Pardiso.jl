@@ -28,6 +28,7 @@ function MKLPardisoSolver()
 
     ps = MKLPardisoSolver(pt, iparm, mtype, solver,
                       phase, msglvl, maxfct, mnum, perm)
+    finalizer(finalize_solver!, ps)
     return ps
 end
 

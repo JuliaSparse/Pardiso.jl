@@ -245,13 +245,18 @@ end
 
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
-    finalizer(ps) do obj
-        set_phase!(obj, RELEASE_ALL)
+    return
+end
+
+# Registered as a finalizer on solver objects in their constructors.
+# Finalizers may not yield (so no printing) and this releases the internal
+# library memory at GC if the solver has been initialized.
+function finalize_solver!(ps::AbstractPardisoSolver)
+    if any(!iszero, ps.pt)
+        set_phase!(ps, RELEASE_ALL)
         try
-            pardiso(obj)
-        catch err
-            println("Error while finalizing pardiso solver object")
-            rethrow(err)
+            pardiso(ps)
+        catch
         end
     end
     return

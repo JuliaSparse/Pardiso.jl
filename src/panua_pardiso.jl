@@ -45,6 +45,7 @@ function PardisoSolver(; loadchecks::Bool = true)
 
     ps = PardisoSolver(pt, iparm, dparm, mtype, solver,
                   phase, msglvl, maxfct, mnum, perm, colptr, rowval)
+    finalizer(finalize_solver!, ps)
     return ps
 end
 
