@@ -150,6 +150,23 @@ if Pardiso.PARDISO_LOADED[]
             S = schur_complement(ps, M, x);
             @test norm(D - C*A⁻¹*B - S) < 1e-10*(m+n)^2
         end
+
+        A = 5I + sprand(rng,T,m,m,p)
+        B = sprand(rng,T,m,n,p)
+        C = sprand(rng,T,n,m,p)
+        D = 5I + sprand(rng,T,n,n,p)
+        M = [A B; C D]
+
+        # the block-defining sparse input must not be modified, also when
+        # its rowvals are unsorted across columns
+        x = spzeros(T, m+n, 2)
+        x[m+2, 1] = 1
+        x[m+1, 2] = 1
+        xcolptr, xrowval, xnzval = copy(x.colptr), copy(x.rowval), copy(x.nzval)
+        schur_complement(ps, M, x)
+        @test x.colptr == xcolptr
+        @test x.rowval == xrowval
+        @test x.nzval == xnzval
     end
 end # testset
 end

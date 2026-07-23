@@ -532,7 +532,7 @@ If `n=nnz(x)`, then `S` is `n`-by-`n`.
 WARNING: for complex `A`, seems to be unstable, made worse as number of nonzero elements in `A` decreases.
 """
 schur_complement(ps::AbstractPardisoSolver,A,x::SparseVector,T::Symbol=:N) = _schur_complement_permuted(ps,A,x.nzind,T)
-schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(x.rowval)),T)
+schur_complement(ps::AbstractPardisoSolver,A,x::SparseMatrixCSC,T::Symbol=:N) = _schur_complement_permuted(ps,A,unique!(sort!(copy(rowvals(x)))),T)
 
 # permute A and then compute complement of lower right-hand `n`-by-`n` block
 function _schur_complement_permuted(ps,A,rows,T::Symbol)
