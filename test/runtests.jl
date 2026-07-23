@@ -32,6 +32,21 @@ const rng = StableRNG(1)
 
 println("Testing ", available_solvers)
 
+# These do not require a solver library and always run
+@testset "isstructurallysymmetric" begin
+    A = sparse([1, 2, 2], [2, 1, 2], [1.0, 2.0, 3.0], 2, 2)
+    @test Pardiso.isstructurallysymmetric(A)
+    A = sparse([1], [2], [1.0], 2, 2)
+    @test !Pardiso.isstructurallysymmetric(A)
+
+    # Stored (structural) zeros are ignored and must not cause
+    # out of bounds access when a column runs out of stored entries
+    A = sparse([3, 1], [2, 3], [1.0, 0.0], 3, 3)
+    @test !Pardiso.isstructurallysymmetric(A)
+    A = sparse([1, 2], [2, 1], [0.0, 0.0], 2, 2)
+    @test Pardiso.isstructurallysymmetric(A)
+end
+
 supported_eltypes(ps::PardisoSolver) = (Float64, ComplexF64)
 supported_eltypes(ps::MKLPardisoSolver) = (Float32, ComplexF32, Float64, ComplexF64)
 
