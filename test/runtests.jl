@@ -157,6 +157,18 @@ if Pardiso.PARDISO_LOADED[]
         D = 5I + sprand(rng,T,n,n,p)
         M = [A B; C D]
 
+        # invalid inputs are rejected before any solver state is touched
+        @test_throws ArgumentError schur_complement(ps, M, -1)
+        @test_throws ArgumentError schur_complement(ps, M, m + n)
+        @test_throws ArgumentError schur_complement(ps, M, n, :Q)
+
+        # solver state is restored after the call
+        original_iparms = copy(get_iparms(ps))
+        original_phase = get_phase(ps)
+        schur_complement(ps, M, n)
+        @test get_iparms(ps) == original_iparms
+        @test get_phase(ps) == original_phase
+
         # the block-defining sparse input must not be modified, also when
         # its rowvals are unsorted across columns
         x = spzeros(T, m+n, 2)
