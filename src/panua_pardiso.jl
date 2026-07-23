@@ -63,6 +63,10 @@ get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
 set_dparm!(ps::PardisoSolver, i::Integer, v::AbstractFloat) = ps.dparm[i] = v
 get_nprocs(ps::PardisoSolver) = ps.iparm[3]
+set_nprocs!(ps::PardisoSolver, n::Integer) =
+    throw(ArgumentError(string("PardisoSolver reads the number of threads from the OMP_NUM_THREADS ",
+                               "environment variable when the solver is created and it cannot be ",
+                               "changed afterwards")))
 
 set_solver!(ps::PardisoSolver, v::Int) = set_solver!(ps, Solver(v))
 function set_solver!(ps::PardisoSolver, v::Solver)

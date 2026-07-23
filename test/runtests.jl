@@ -221,6 +221,10 @@ for pardiso_type in available_solvers
     pardiso(ps)
     set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT_SOLVE_REFINE)
 
+    if pardiso_type == PardisoSolver
+        @test_throws ArgumentError set_nprocs!(ps, 2)
+    end
+
     B = rand(rng, 12, 2)
     @test_throws DimensionMismatch solve(ps, A, B)
 end
