@@ -20,10 +20,16 @@ jobs:
           - 'nightly'
         os:
           - ubuntu-latest
-          - macOS-latest
+          - macOS-13 # Intel; MKL is not available on Apple Silicon
           - windows-latest
         arch:
           - x64
+        include:
+          # Apple Silicon has no MKL; this checks that the package degrades
+          # gracefully when no solver backend is available
+          - version: '1'
+            os: macOS-latest
+            arch: aarch64
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -42,6 +48,10 @@ jobs:
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+        env:
+          # Jobs on x64 must have a working MKL; the tests fail instead of
+          # silently skipping all solver tests if it does not load
+          PARDISO_TEST_EXPECT_MKL: ${{ matrix.arch == 'x64' }}
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v5
         with:

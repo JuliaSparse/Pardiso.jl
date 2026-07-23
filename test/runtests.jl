@@ -2,7 +2,8 @@ ENV["OMP_NUM_THREADS"] = 2
 
 
 using Pkg
-if Sys.isapple()
+# MKL_jll versions after 2023 do not work on (Intel) macs
+if Sys.isapple() && Sys.ARCH === :x86_64
     Pkg.add(name="MKL_jll"; version = "2023")
 end
 
@@ -18,11 +19,19 @@ available_solvers = empty([Pardiso.AbstractPardisoSolver])
 if Pardiso.mkl_is_available()
     push!(available_solvers, MKLPardisoSolver)
 else
+    # CI jobs that are expected to have a working MKL should fail instead of
+    # silently skipping all solver tests
+    if get(ENV, "PARDISO_TEST_EXPECT_MKL", "false") == "true"
+        error("PARDISO_TEST_EXPECT_MKL is set but MKL is not available")
+    end
     @warn "Not testing MKL Pardiso solver"
 end
 if Pardiso.PARDISO_LOADED[]
     push!(available_solvers, PardisoSolver)
 else
+    if get(ENV, "PARDISO_TEST_EXPECT_PANUA", "false") == "true"
+        error("PARDISO_TEST_EXPECT_PANUA is set but Panua Pardiso is not available")
+    end
     @warn "Not testing panua Pardiso solver"
 end
 
