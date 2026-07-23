@@ -493,7 +493,9 @@ end
 
 function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},
                  B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
-    if length(X) != 0
+    # For phases that write a solution, X must always be a valid output
+    # buffer; for other phases it is allowed to be an empty dummy array.
+    if length(X) != 0 || is_solve_phase(get_phase(ps))
         dim_check(X, A, B)
     end
 
@@ -634,6 +636,8 @@ function dim_check(X, A, B)
                                                                "rows, RHS has $(size(B,1)) rows.")))
     size(B, 1) == stride(B, 2) || throw(DimensionMismatch(
                                             string("Only memory-contiguous RHS supported")))
+    size(X, 1) == stride(X, 2) || throw(DimensionMismatch(
+                                            string("Only memory-contiguous solution storage supported")))
 end
 
 end # module

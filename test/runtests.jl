@@ -208,6 +208,19 @@ for pardiso_type in available_solvers
     X = zeros(12, 2)
     @test_throws DimensionMismatch solve!(ps,X, A, B)
 
+    # Non-contiguous output storage is not supported
+    Xbad = view(zeros(12, 2), 1:10, :)
+    @test_throws DimensionMismatch solve!(ps, Xbad, A, B)
+
+    # A phase that computes a solution requires a valid output buffer
+    set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT_SOLVE_REFINE)
+    @test_throws DimensionMismatch pardiso(ps, A, B)
+    set_phase!(ps, Pardiso.ANALYSIS)
+    pardiso(ps, A, B) # accepts an empty dummy X
+    set_phase!(ps, Pardiso.RELEASE_ALL)
+    pardiso(ps)
+    set_phase!(ps, Pardiso.ANALYSIS_NUM_FACT_SOLVE_REFINE)
+
     B = rand(rng, 12, 2)
     @test_throws DimensionMismatch solve(ps, A, B)
 end

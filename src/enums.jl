@@ -65,6 +65,14 @@ const SOLVER_STRING = Dict{Solver, String}(
     RELEASE_ALL                           = -1
 )
 
+# Phases where the library writes a solution into X
+is_solve_phase(phase::Phase) = phase in (ANALYSIS_NUM_FACT_SOLVE_REFINE,
+                                         NUM_FACT_SOLVE_REFINE,
+                                         SOLVE_ITERATIVE_REFINE,
+                                         SOLVE_ITERATIVE_REFINE_ONLY_FORWARD,
+                                         SOLVE_ITERATIVE_REFINE_ONLY_DIAG,
+                                         SOLVE_ITERATIVE_REFINE_ONLY_BACKWARD)
+
 const PHASE_STRING = Dict{Phase, String}(
     ANALYSIS                             => "Analysis",
     ANALYSIS_NUM_FACT                    => "Analysis, numerical factorization",
