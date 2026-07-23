@@ -125,8 +125,8 @@ function printstats(ps::PardisoSolver, A::SparseMatrixCSC{Tv, Ti},
                     B::StridedVecOrMat{Tv}) where {Ti,Tv <: PardisoNumTypes}
     N = Int32(size(A, 2))
     AA = A.nzval
-    IA = ps.colptr
-    JA = ps.rowval
+    IA = convert(Vector{Int32}, A.colptr)
+    JA = convert(Vector{Int32}, A.rowval)
     NRHS = Int32(size(B, 2))
     ERR = Ref{Int32}(0)
     if Tv <: Complex
