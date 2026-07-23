@@ -243,6 +243,12 @@ end
 
 
 
+"""
+    pardisoinit(ps)
+
+Initialize the `iparm` (and for `PardisoSolver` the `dparm`) values of `ps` to
+the library defaults for the currently set matrix type and solver.
+"""
 function pardisoinit(ps::AbstractPardisoSolver)
     ccall_pardisoinit(ps)
     return
@@ -263,6 +269,17 @@ function finalize_solver!(ps::AbstractPardisoSolver)
 end
 
 
+"""
+    solve(ps, A, B, T=:N) -> X
+
+Solve `AX = B` using the Pardiso solver `ps` and return the solution `X`.
+`T` selects the system to solve: `:N` solves `AX = B`, `:T` solves
+`transpose(A)X = B` and `:C` solves `adjoint(A)X = B`.
+
+The matrix type is chosen automatically based on the symmetry of `A` and the
+factorization is not kept afterwards; see the README for how to reuse
+factorizations via `pardiso` directly.
+"""
 function solve(ps::AbstractPardisoSolver, A::SparseMatrixCSC{Tv,Ti},
                B::StridedVecOrMat{Tv}, T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
     X = copy(B)
@@ -376,6 +393,12 @@ end
 
 isstructurallysymmetric(A::SparseMatrixCSC) = _is_hermsym(A, (x,y) -> true)
 
+"""
+    solve!(ps, X, A, B, T=:N) -> X
+
+Like [`solve`](@ref) but stores the solution in the preallocated `X`, which
+must have the same size as `B` and be memory-contiguous.
+"""
 function solve!(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv},
                 A::SparseMatrixCSC{Tv,Ti}, B::StridedVecOrMat{Tv},
                 T::Symbol=:N) where {Ti, Tv <: PardisoNumTypes}
@@ -501,6 +524,15 @@ function get_matrix(ps::AbstractPardisoSolver, A, T)
     error("Unhandled matrix type")
 end
 
+"""
+    pardiso(ps, X, A, B)
+
+Call the Pardiso library directly, running the currently set phase with the
+currently set matrix type and iparms of `ps`, storing any computed solution
+in `X`. This is the low-level entry point for advanced usage; see the README
+for details. For phases that do not compute a solution, `X` may be an empty
+array.
+"""
 function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMatrixCSC{Tv,Ti},
                  B::StridedVecOrMat{Tv}) where {Ti, Tv <: PardisoNumTypes}
     # For phases that write a solution, X must always be a valid output
