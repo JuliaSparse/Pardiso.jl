@@ -29,13 +29,14 @@ function PardisoSolver(; loadchecks::Bool = true)
     solver = DIRECT_SOLVER
     phase = ANALYSIS_NUM_FACT_SOLVE_REFINE
     msglvl = MESSAGE_LEVEL_OFF
-    # Set number of processors to CPU_CORES unless "OMP_NUM_THREADS" is set
-    if haskey(ENV, "OMP_NUM_THREADS")
-        iparm[3] = parse(Int, ENV["OMP_NUM_THREADS"])
-    else
+    # Set number of processors from "OMP_NUM_THREADS" if it is set and parses
+    # as a single number (it can also hold a comma-separated list of values)
+    nthreads = tryparse(Int, get(ENV, "OMP_NUM_THREADS", ""))
+    if nthreads === nothing
         # Assume 2 threads per core
-        iparm[3] = max(div(Sys.CPU_THREADS, 2), 1)
+        nthreads = max(div(Sys.CPU_THREADS, 2), 1)
     end
+    iparm[3] = nthreads
 
     mnum = 1
     maxfct = 1
@@ -57,8 +58,6 @@ show(io::IO, ps::PardisoSolver) = print(io, string("$PardisoSolver:\n",
                                   "\tNum processors: $(get_nprocs(ps))"))
 
 
-
-phases(ps::PardisoSolver) = PHASES
 
 get_dparm(ps::PardisoSolver, i::Integer) = ps.dparm[i]
 get_dparms(ps::PardisoSolver) = ps.dparm
@@ -87,7 +86,7 @@ end
 
     N = Int32(N)
     # Save new colptr and rowvals if a new analysis phase is run
-    if ps.phase in [ANALYSIS, ANALYSIS_NUM_FACT, ANALYSIS_NUM_FACT_SOLVE_REFINE]
+    if ps.phase in (ANALYSIS, ANALYSIS_NUM_FACT, ANALYSIS_NUM_FACT_SOLVE_REFINE)
         ps.colptr = convert(Vector{Int32}, colptr)
         ps.rowval = convert(Vector{Int32}, rowval)
     end

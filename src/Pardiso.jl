@@ -1,5 +1,3 @@
-__precompile__()
-
 module Pardiso
 
 if !isfile(joinpath(@__DIR__, "..", "deps", "deps.jl"))
@@ -26,10 +24,12 @@ if !LOCAL_MKL_FOUND
     import MKL_jll
 end
 
-MKL_LOAD_FAILED = false
+const MKL_LOAD_FAILED = Ref(false)
 
-mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED
+mkl_is_available() = (LOCAL_MKL_FOUND || MKL_jll.is_available()) && !MKL_LOAD_FAILED[]
 
+# On Julia >= 1.7 (libblastrampoline) `BLAS.vendor()` always returns `:lbt`, so
+# this branch is only taken on Julia 1.6 binaries built directly against 64-bit MKL.
 if LinearAlgebra.BLAS.vendor() === :mkl && LinearAlgebra.BlasInt == Int64
     const MklInt = Int64
     const PARDISO_FUNC = :pardiso_64
@@ -145,7 +145,7 @@ panua_is_available() = panua_is_loaded() && panua_is_licensed()
 
 
 function __init__()
-    global MKL_LOAD_FAILED, libmkl_rt
+    global libmkl_rt
     if LOCAL_MKL_FOUND
         if Sys.iswindows()
             libmkl_rt = "mkl_rt"
@@ -172,7 +172,7 @@ function __init__()
             mklpardiso_f = Libdl.dlsym(libmklpardiso, "pardiso")
         catch e
             @error("MKL Pardiso did not manage to load, error thrown was: $(sprint(showerror, e))")
-            MKL_LOAD_FAILED = true
+            MKL_LOAD_FAILED[] = true
         end
     end
 
@@ -525,8 +525,6 @@ function pardiso(ps::AbstractPardisoSolver, X::StridedVecOrMat{Tv}, A::SparseMat
     end
 
     N = size(A, 2)
-
-    resize!(ps.perm, size(B, 1))
 
     NRHS = size(B, 2)
 

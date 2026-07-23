@@ -44,15 +44,16 @@ get_nprocs(ps::MKLPardisoSolver) = get_nprocs_mkl()
 get_nprocs_mkl() =
     ccall((:mkl_domain_get_max_threads, libmkl_rt), Int32, (Ptr{Int32},), Ref(MKL_DOMAIN_PARDISO))
 
-valid_phases(ps::MKLPardisoSolver) = keys(MKL_PHASES)
-phases(ps::MKLPardisoSolver) = MKL_PHASES
-
 function ccall_pardisoinit(ps::MKLPardisoSolver)
-    ERR = Ref{MklInt}(0)
+    # Note: Intel documents `pardisoinit` as incompatible with `pardiso_64`
+    # (it uses the mkl_rt interface layer integer width, not Int64), but the
+    # `PARDISO_FUNC === :pardiso_64` configuration is only reachable on
+    # Julia 1.6 binaries built directly against ILP64 MKL, where the
+    # interface layer matches.
     ccall((:pardisoinit, libmkl_rt), Cvoid,
           (Ptr{Int}, Ptr{MklInt}, Ptr{MklInt}),
           ps.pt, Ref(MklInt(ps.mtype)), ps.iparm)
-    check_error(ps, ERR[])
+    return
 end
 
 function ccall_pardiso(ps::MKLPardisoSolver, N, nzval::Vector{Tv}, colptr, rowval,
