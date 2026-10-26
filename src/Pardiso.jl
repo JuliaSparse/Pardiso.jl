@@ -249,10 +249,13 @@ function pardisoinit(ps::AbstractPardisoSolver)
         set_phase!(obj, RELEASE_ALL)
         try
             pardiso(obj)
-        catch err
-            println("Error while finalizing pardiso solver object")
-            rethrow(err)
+        catch
+            # Finalizers must not task switch, so no `println`; a rethrow would only be
+            # reported as "error in running finalizer".
+            ccall(:jl_safe_printf, Cvoid, (Cstring,),
+                  "Error while finalizing pardiso solver object; its memory may leak\n")
         end
+        return
     end
     return
 end
